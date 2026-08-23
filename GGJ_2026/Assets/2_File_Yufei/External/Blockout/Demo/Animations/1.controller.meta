@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 9edaed9c563824741aad3b845f64c0fc
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Demo/Animations/1.controller
+  uploadId: 414330

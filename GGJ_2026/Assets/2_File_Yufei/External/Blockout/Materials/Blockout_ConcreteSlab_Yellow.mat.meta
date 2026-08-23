@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 31290e4c510127841a33d004d3c97be2
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Materials/Textured/ConcreteSlab Yellow.mat
+  uploadId: 414330

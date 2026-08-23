@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: d242b46f6f1242a42a38f63fc35d0127
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Prefabs/Environment/BuildingFloor.prefab
+  uploadId: 414330

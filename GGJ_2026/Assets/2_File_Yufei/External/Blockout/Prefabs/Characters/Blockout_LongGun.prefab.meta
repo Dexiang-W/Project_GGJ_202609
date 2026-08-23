@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: fb4c2df8055249a488cc2de1815ef2a8
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Prefabs/Combat/LongGun.prefab
+  uploadId: 414330
