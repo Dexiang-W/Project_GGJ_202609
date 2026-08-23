@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 06603bdd8f3ee2445b5011555831cde0
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Materials/Stripes.mat
+  uploadId: 414330

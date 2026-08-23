@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 35a3e64602b1f204bb1160c1ce32d69c
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Prefabs/Environment/Block_1x1x0.25.prefab
+  uploadId: 414330

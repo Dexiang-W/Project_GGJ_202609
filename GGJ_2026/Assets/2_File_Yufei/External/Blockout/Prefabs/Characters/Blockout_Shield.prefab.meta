@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 4291eb3c8d12c424aa9f2a6c4c5fd6fa
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Prefabs/Combat/Shield.prefab
+  uploadId: 414330

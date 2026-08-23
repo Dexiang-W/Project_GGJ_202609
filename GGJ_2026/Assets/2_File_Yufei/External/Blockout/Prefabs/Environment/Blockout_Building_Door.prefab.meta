@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: c3d0a82c47620dd4798f77424a007b59
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Prefabs/Environment/Building_Door.prefab
+  uploadId: 414330

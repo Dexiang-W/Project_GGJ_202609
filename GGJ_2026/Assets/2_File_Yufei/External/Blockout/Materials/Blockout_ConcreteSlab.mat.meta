@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f0ce5341880620d4194ae1a65eb273cf
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Materials/Textured/ConcreteSlab.mat
+  uploadId: 414330

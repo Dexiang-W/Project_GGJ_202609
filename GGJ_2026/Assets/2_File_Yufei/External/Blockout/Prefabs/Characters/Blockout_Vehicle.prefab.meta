@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: d070472a8eecc854f811ee56794ece47
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Prefabs/Transport/Vehicle.prefab
+  uploadId: 414330

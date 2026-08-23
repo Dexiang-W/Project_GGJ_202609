@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d10c34ceaf2c27f4b85c1ad185062fcc
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4300000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Mesh/Vegetation/Palm_meshes/Palm_LOD4.mesh
+  uploadId: 414330
