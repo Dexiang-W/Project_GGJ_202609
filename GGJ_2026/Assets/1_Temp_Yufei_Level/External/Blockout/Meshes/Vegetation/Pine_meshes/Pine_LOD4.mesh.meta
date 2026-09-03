@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f63481a077a293f458c4ac2f308f93b3
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4300000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Mesh/Vegetation/Pine_meshes/Pine_LOD4.mesh
+  uploadId: 414330

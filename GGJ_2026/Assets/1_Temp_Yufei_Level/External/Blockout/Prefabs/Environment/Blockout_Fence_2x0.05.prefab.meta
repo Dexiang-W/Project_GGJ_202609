@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: cd2a22a328d210f4db6bc340885c0a84
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Prefabs/Environment/Fence_2x0.05.prefab
+  uploadId: 414330

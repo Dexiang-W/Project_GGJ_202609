@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3680aa0cc58da3f418c0d0bfe76dcf09
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4300000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Mesh/Vegetation/Bush_meshes/Bush_LOD3.mesh
+  uploadId: 414330

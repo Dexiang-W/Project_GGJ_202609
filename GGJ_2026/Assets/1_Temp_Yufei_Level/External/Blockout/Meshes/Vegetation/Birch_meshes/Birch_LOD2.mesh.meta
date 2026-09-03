@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c1a3da1068ed78744ab073a4d6a6a1a2
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4300000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Mesh/Vegetation/Birch_meshes/Birch_LOD2.mesh
+  uploadId: 414330

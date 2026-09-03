@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: bc16f3cc459c3ba46b167da2a5d4a1a1
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Prefabs/Combat/Pistol.prefab
+  uploadId: 414330

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ec2de5241de336346b96a2d33ae5cf9f
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 169790
+  packageName: BlockOut Prototype Kit
+  packageVersion: 1.0
+  assetPath: Assets/BlockOutKit/Asset/Prefabs/Environment/Wedge_1x1.prefab
+  uploadId: 414330
