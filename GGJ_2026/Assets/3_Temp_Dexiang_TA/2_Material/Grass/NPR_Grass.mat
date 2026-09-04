@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: M_Grass
+  m_Name: NPR_Grass
   m_Shader: {fileID: -6465566751694194690, guid: aa29b098d5b9d994f84bfe76496bc6db,
     type: 3}
   m_Parent: {fileID: 0}
@@ -95,7 +95,7 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _ColorOffset: 0.82
+    - _ColorOffset: 0
     - _Cull: 2
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
@@ -110,12 +110,12 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _GrassCutLengthOffset: 0.38
-    - _GrassCutOffset: 0.27
+    - _GrassCutOffset: -0.27
     - _GrassCutSize: 256
-    - _GrassDown: 0.52
+    - _GrassDown: 0.28
     - _ISATTACKING: 1
     - _ISFACE: 0
-    - _InteractionRadius: 0.88
+    - _InteractionRadius: 1.54
     - _MAIN_LIGHT_SHADOWS: 0
     - _MAIN_LIGHT_SHADOWS_CASCADE: 0
     - _MainScale: 1
@@ -139,7 +139,7 @@ Material:
     - _Surface: 0
     - _TerrainRatio: 0
     - _TerrainSize: 0
-    - _WindAmplitude: 25
+    - _WindAmplitude: 5
     - _WindDirectionNoiseScale: 0.8
     - _WindDirectionNoiseStrength: 10
     - _WindNoiseScale: 1.58
@@ -153,13 +153,13 @@ Material:
     - _Color: {r: 0.4433962, g: 0, b: 0, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _GrassCutColor: {r: 1, g: 1, b: 1, a: 0}
-    - _MainColor: {r: 0.35686275, g: 0.3019608, b: 0.19215687, a: 0}
+    - _MainColor: {r: 0.3529412, g: 0.50980395, b: 0.27058825, a: 0}
     - _ShadowColor: {r: 0.122641504, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _TerrainOrigin: {r: -33.2, g: 1.1, b: 0, a: 0}
-    - _TerrainSize: {r: 100, g: 100, b: 0, a: 0}
+    - _TerrainOrigin: {r: -417, g: -264, b: 0, a: 0}
+    - _TerrainSize: {r: 800, g: 500, b: 0, a: 0}
     - _TipCOlort: {r: 0.7169812, g: 0, b: 0, a: 0}
-    - _TipColor: {r: 0.23972948, g: 0.5283019, b: 0.0473478, a: 1}
+    - _TipColor: {r: 0.5294118, g: 0.65882355, b: 0.30980393, a: 1}
     - _WindDirection: {r: 1, g: 1, b: 1, a: 0}
     - _WindInteractionPoint: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []

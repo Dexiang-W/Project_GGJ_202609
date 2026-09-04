@@ -40,9 +40,9 @@ Material:
     m_Ints: []
     m_Floats:
     - _ISROUNDED: 1
-    - _Intensity: 0.08
-    - _Range: 1.39
-    - _Smoothness: 2.2
+    - _Intensity: 0
+    - _Range: 2.42
+    - _Smoothness: 1.18
     m_Colors:
-    - _Color: {r: 0, g: 0, b: 0, a: 0}
+    - _Color: {r: 0.2924528, g: 0.22938761, b: 0.062077258, a: 0}
   m_BuildTextureStacks: []
