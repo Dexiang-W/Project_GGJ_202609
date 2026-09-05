@@ -56,7 +56,7 @@ public static class Editor_SandStormCreate
         SceneView.lastActiveSceneView?.FrameSelected();
     }
 
-    [MenuItem("Tools/TA/Sand Storm (绑定风场)", false, 300)]
+    [MenuItem("Tools/Dexiang TA/沙尘 SandStorm (绑定风场)", false, 10)]
     public static void CreateSandStormFromTools()
     {
         CreateSandStorm();

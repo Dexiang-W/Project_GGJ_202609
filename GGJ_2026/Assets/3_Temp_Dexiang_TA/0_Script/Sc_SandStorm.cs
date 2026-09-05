@@ -211,6 +211,11 @@ public class Sc_SandStorm : MonoBehaviour
         EnsureRefs();
         if (_ps == null) return;
 
+        // 必须先彻底停止系统（StopEmittingAndClear），否则在播放状态设置
+        // main.duration / emission / shape 等模块会抛
+        // "Setting the duration while system is still playing is not supported."
+        _ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
         // ---- Main ----
         var main = _ps.main;
         main.loop = true;
