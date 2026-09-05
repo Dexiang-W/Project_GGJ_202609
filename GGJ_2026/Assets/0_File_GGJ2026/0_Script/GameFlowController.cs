@@ -98,6 +98,16 @@ public class GameFlowController : MonoBehaviour
     [Tooltip("生成瞬间相机相对生成点的机位（黑幕淡出期间会自动拉近到位）")]
     [SerializeField] private Vector3 spawnCameraOffset = new Vector3(0f, 2f, -4.5f);
 
+    [Header("关卡出生镜头点")]
+    [Tooltip("启用后：进正式关卡时若场景里摆有出生镜头点（挂 CameraPointMarker 且勾选 IsStartPoint 的空物体），" +
+             "相机就先瞬移到该镜头点的位置/角度取景，定格一会后自动平滑切回跟拍玩家。\n" +
+             "没摆镜头点时，回退用上面的 spawnCameraOffset 机位。")]
+    [SerializeField] private bool useStartCameraPoint = true;
+    [Tooltip("出生定格时长（秒）：玩家从黑幕淡出出现后，相机在出生镜头点上停留多久，再平滑切回跟拍玩家")]
+    [SerializeField] private float startCameraHoldDuration = 0.6f;
+    [Tooltip("定格结束后，相机从镜头点缓慢“追回/跟上”玩家的过渡时长（秒）。数值越大镜头回得越慢、越舒缓（建议 1~4 之间试）")]
+    [SerializeField] private float resumeFollowBlendSeconds = 1.6f;
+
     [Header("调试")]
     [SerializeField] private bool skipSpawnSequence = false;
     private StarterAssetsInputs playerInputs;
@@ -110,6 +120,7 @@ public class GameFlowController : MonoBehaviour
     private CameraFollowController cameraFollow;
     private CharacterController charController;
     private int attractWrapCount;
+    private bool startCameraShotActive;
 
     // 标题循环用
     private Vector3 attractOrigin;
@@ -439,8 +450,7 @@ public class GameFlowController : MonoBehaviour
             ResolveSpawnPointInLoadedScene();
 
             TeleportPlayerToSpawn();
-            if (mainCamera != null && spawnPoint != null)
-                mainCamera.transform.position = spawnPoint.position + spawnCameraOffset;
+            SetupLevelStartCamera();
 
             DisableLevelDefaultCamera();
 
@@ -474,17 +484,20 @@ public class GameFlowController : MonoBehaviour
                     else
                         yield return PopInSpawn(player);
                 }
-
-                if (walkOutDuration > 0f)
-                {
-                    driveInput = true;
-                    autoRunAxis = walkOutSpeedAxis;
-                    yield return new WaitForSeconds(walkOutDuration);
-                }
             }
             else if (titleUI != null && withCinematics)
             {
                 yield return titleUI.FadeFromBlackRoutine(fadeFromBlackDuration);
+            }
+
+            // 玩家已出现在画面中：让出生镜头点“定格”一小会，再平滑切回跟拍玩家
+            BeginStartCameraFollowReturn();
+
+            if (!skipSpawnSequence && walkOutDuration > 0f)
+            {
+                driveInput = true;
+                autoRunAxis = walkOutSpeedAxis;
+                yield return new WaitForSeconds(walkOutDuration);
             }
         }
         else
@@ -500,9 +513,7 @@ public class GameFlowController : MonoBehaviour
     {
         ResolveSpawnPointByName();
         TeleportPlayerToSpawn();
-
-        if (mainCamera != null && spawnPoint != null)
-            mainCamera.transform.position = spawnPoint.position + spawnCameraOffset;
+        SetupLevelStartCamera();
 
         if (skipSpawnSequence || playerController == null)
         {
@@ -533,6 +544,9 @@ public class GameFlowController : MonoBehaviour
                     yield return PopInSpawn(player);
             }
         }
+
+        // 玩家已出现：让出生镜头点定格一会，再平滑切回跟拍玩家
+        BeginStartCameraFollowReturn();
 
         FinishSpawn();
         HideTitleUI();
@@ -579,6 +593,87 @@ public class GameFlowController : MonoBehaviour
 
         if (characterController != null)
             characterController.enabled = true;
+    }
+
+    /// <summary>
+    /// 关卡出生镜头处理（在玩家传送回出生点后、黑幕淡出前调用）：
+    /// 若场景摆有出生镜头点（CameraPointMarker，优先勾选了 IsStartPoint 的那个），
+    /// 黑幕内把相机瞬移到该点的位置/角度并锁定取景；稍后由 BeginStartCameraFollowReturn 定格一会再切回跟拍。
+    /// 没有摆镜头点时，维持旧的 spawnPoint + spawnCameraOffset 机位作为回退。
+    /// </summary>
+    private void SetupLevelStartCamera()
+    {
+        if (mainCamera == null || playerController == null)
+            return;
+
+        bool applyFallbackOffset = true;
+
+        if (useStartCameraPoint && cameraFollow != null)
+        {
+            CameraPointMarker start = ResolveStartCameraPoint();
+            if (start != null)
+            {
+                Transform point = start.transform;
+
+                // 锁定到镜头点并立即就位（含位置/角度/FOV），黑幕期间玩家看不到切换过程
+                cameraFollow.SetLockedPoint(point, start.CameraFOV);
+                cameraFollow.SnapToCurrentTarget();
+                mainCamera.transform.rotation = point.rotation;
+                mainCamera.fieldOfView = start.CameraFOV;
+
+                startCameraShotActive = true;
+                applyFallbackOffset = false;
+
+                Debug.Log($"[GameFlowController] 使用出生镜头点 {point.name}：位置 {point.position}，" +
+                          $"朝向 {point.eulerAngles}，FOV {start.CameraFOV}，" +
+                          $"定格 {startCameraHoldDuration}s 后切回跟拍玩家。", start);
+            }
+        }
+
+        if (applyFallbackOffset && spawnPoint != null)
+            mainCamera.transform.position = spawnPoint.position + spawnCameraOffset;
+    }
+
+    /// <summary>
+    /// 玩家从黑幕中正式出现后调用：让出生镜头点再“定格”一小段（构成开场取景），
+    /// 然后自动平滑切回 CameraFollowController 的“跟拍玩家”机位。
+    /// </summary>
+    private void BeginStartCameraFollowReturn()
+    {
+        if (!startCameraShotActive)
+            return;
+
+        startCameraShotActive = false;
+        StartCoroutine(HoldStartCameraThenFollowRoutine());
+    }
+
+    private IEnumerator HoldStartCameraThenFollowRoutine()
+    {
+        if (startCameraHoldDuration > 0f)
+            yield return new WaitForSeconds(startCameraHoldDuration);
+
+        if (cameraFollow != null && cameraFollow.IsLocked)
+        {
+            // 在 resumeFollowBlendSeconds 内缓慢追回跟拍机位（而不是“嗖”地一下瞬切）
+            cameraFollow.SetNormalModeWithBlend(resumeFollowBlendSeconds);
+            Debug.Log($"[GameFlowController] 出生镜头定格结束，相机在 {resumeFollowBlendSeconds}s 内缓慢切回跟拍玩家。", this);
+        }
+    }
+
+    /// <summary>查找出生镜头点：优先场景里勾选了 IsStartPoint 的 CameraPointMarker；全都没勾时取第一个，避免“忘了勾选就用不上”。</summary>
+    private CameraPointMarker ResolveStartCameraPoint()
+    {
+        CameraPointMarker[] markers = FindObjectsOfType<CameraPointMarker>();
+        if (markers == null || markers.Length == 0)
+            return null;
+
+        foreach (CameraPointMarker marker in markers)
+        {
+            if (marker != null && marker.IsStartPoint)
+                return marker;
+        }
+
+        return markers[0];
     }
 
     /// <summary>禁用正式场景自带的默认相机（避免两个相机/两个 AudioListener）。</summary>
