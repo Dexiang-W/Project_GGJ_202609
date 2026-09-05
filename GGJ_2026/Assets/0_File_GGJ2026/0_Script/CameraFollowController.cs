@@ -153,4 +153,33 @@ public class CameraFollowController : MonoBehaviour
 
     public CameraMode GetCurrentMode() => currentMode;
     public bool IsLocked => currentMode == CameraMode.LockedPoint;
+
+    /// <summary>
+    /// 立刻把相机放到当前模式对应的目标位置，并清空平滑速度。
+    /// 用于“循环传送 / 掉出世界拉回”这类瞬移场景，避免 SmoothDamp 残留速度把画面甩飞。
+    /// </summary>
+    public void SnapToCurrentTarget()
+    {
+        currentVelocity = Vector3.zero;
+
+        Vector3 desired = transform.position;
+
+        switch (currentMode)
+        {
+            case CameraMode.Normal:
+                if (followTarget != null)
+                    desired = followTarget.position + offset;
+                break;
+            case CameraMode.ZoomedFollow:
+                if (followTarget != null)
+                    desired = followTarget.position + pendingOffset;
+                break;
+            case CameraMode.LockedPoint:
+                if (pendingFixedPoint != null)
+                    desired = pendingFixedPoint.position;
+                break;
+        }
+
+        transform.position = desired;
+    }
 }

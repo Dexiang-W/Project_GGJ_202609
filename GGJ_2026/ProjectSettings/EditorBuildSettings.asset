@@ -6,6 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/0_File_GGJ2026/6_Scene/Bandeng_Test.unity
+    guid: dff4278973bdbbf4cb913341dfba9930
+  - enabled: 1
+    path: Assets/0_File_GGJ2026/6_Scene/Level1.unity
+    guid: 6032fcd009add804d919eb13cf7148a1
+  - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   m_configObjects:
