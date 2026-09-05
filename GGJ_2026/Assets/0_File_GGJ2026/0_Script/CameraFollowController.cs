@@ -21,6 +21,11 @@ public class CameraFollowController : MonoBehaviour
     [SerializeField] private Transform followTarget;
     [SerializeField] private Vector3 offset = new Vector3(0, 5, -10);
     [SerializeField] private float followSmoothSpeed = 0.125f;
+    [Header("跟拍角度（Normal / ZoomedFollow 跟拍玩家时生效）")]
+    [Tooltip("在相机场景初始姿态之上叠加的欧拉角旋转（度），0 表示沿用场景里摆好的初始旋转。\n" +
+             "轻微俯视地面：把 X 调成正值，如 20~35；需要仰视则调负值。\n" +
+             "注意：这只旋转相机的朝向，位置仍由上方 offset 决定——俯视后想获得更自然的构图，记得把 offset 的 Y 相应抬高一点（例如 offset=(0,8,-12)）。")]
+    [SerializeField] private Vector3 followRotationOffset = Vector3.zero;
 
     [Header("拉远跟随设置")]
     [SerializeField] private Vector3 zoomOffset = new Vector3(0, 8, -20);
@@ -58,6 +63,19 @@ public class CameraFollowController : MonoBehaviour
     private Quaternion blendStartRotation;
     private float blendStartFOV;
 
+    /// <summary>
+    /// 跟拍玩家（Normal / ZoomedFollow）时的目标相机姿态：
+    /// 场景初始旋转 + 可配置的 followRotationOffset（如俯视角）。
+    /// </summary>
+    private Quaternion GetFollowRotation()
+    {
+        if (followRotationOffset == Vector3.zero)
+            return initialRotation;
+
+        // 叠加到初始姿态上：相当于在场景摆好的朝向上再绕相机自身轴转 followRotationOffset
+        return initialRotation * Quaternion.Euler(followRotationOffset);
+    }
+
     private void Awake()
     {
         cam = GetComponent<Camera>();
@@ -91,7 +109,7 @@ public class CameraFollowController : MonoBehaviour
                 else
                     targetPos = transform.position;
                 targetFOV = initialFOV;
-                targetRot = initialRotation;   // 恢复初始旋转
+                targetRot = GetFollowRotation();   // 初始旋转 + 可配置俯仰等角度
                 break;
 
             case CameraMode.ZoomedFollow:
@@ -100,7 +118,7 @@ public class CameraFollowController : MonoBehaviour
                 else
                     targetPos = transform.position;
                 targetFOV = pendingFOV;
-                targetRot = initialRotation;   // 拉远时也保持初始旋转
+                targetRot = GetFollowRotation();   // 拉远时同样带角度
                 break;
 
             case CameraMode.LockedPoint:
@@ -177,7 +195,7 @@ public class CameraFollowController : MonoBehaviour
         CameraMode previous = currentMode;
         currentMode = CameraMode.Normal;
         targetFOV = initialFOV;
-        targetRotation = initialRotation;   // 确保旋转回到初始
+        targetRotation = GetFollowRotation();   // 含 followRotationOffset
 
         if (previous != CameraMode.Normal)
             BeginModeBlend(modeSwitchBlendSeconds);
@@ -192,7 +210,7 @@ public class CameraFollowController : MonoBehaviour
         CameraMode previous = currentMode;
         currentMode = CameraMode.Normal;
         targetFOV = initialFOV;
-        targetRotation = initialRotation;
+        targetRotation = GetFollowRotation();   // 含 followRotationOffset
 
         if (previous != CameraMode.Normal)
             BeginModeBlend(durationSeconds);
@@ -207,7 +225,7 @@ public class CameraFollowController : MonoBehaviour
         pendingOffset = newOffset;
         pendingFOV = newFOV;
         currentMode = CameraMode.ZoomedFollow;
-        targetRotation = initialRotation;   // 拉远时也保持初始旋转
+        targetRotation = GetFollowRotation();   // 拉远时同样带 followRotationOffset
 
         if (previous != CameraMode.ZoomedFollow || offsetChanged)
             BeginModeBlend(modeSwitchBlendSeconds);
@@ -225,7 +243,7 @@ public class CameraFollowController : MonoBehaviour
         if (point != null)
             targetRotation = point.rotation;  // 固定点旋转
         else
-            targetRotation = initialRotation;
+            targetRotation = GetFollowRotation();
 
         if (previous != CameraMode.LockedPoint || previousPoint != point)
             BeginModeBlend(modeSwitchBlendSeconds);
