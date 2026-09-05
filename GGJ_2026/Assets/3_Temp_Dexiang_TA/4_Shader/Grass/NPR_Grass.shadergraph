@@ -2487,8 +2487,8 @@
     "m_ObjectId": "01003c627f164d089d132e06dfe19232",
     "m_Title": "Color",
     "m_Position": {
-        "x": -687.0,
-        "y": -841.0
+        "x": -687.0006103515625,
+        "y": -841.0003051757813
     }
 }
 
@@ -3667,7 +3667,7 @@
     "m_ObjectId": "18823123c6424a7dbfd1bbb836440672",
     "m_Title": "Wind Noise",
     "m_Position": {
-        "x": -2607.0,
+        "x": -2607.000244140625,
         "y": -2411.0
     }
 }
@@ -4316,7 +4316,7 @@
     "m_Title": "Cut Mask",
     "m_Position": {
         "x": 1519.0,
-        "y": -550.0
+        "y": -550.0003662109375
     }
 }
 
@@ -5495,7 +5495,7 @@
     "m_StageCapability": 3,
     "m_BareResource": false,
     "m_Texture": {
-        "m_SerializedTexture": "{\"texture\":{\"fileID\":8400000,\"guid\":\"06bb9f1119a71cb47aad22789bd03fc3\",\"type\":2}}",
+        "m_SerializedTexture": "",
         "m_Guid": ""
     },
     "m_DefaultType": 0
@@ -5671,8 +5671,8 @@
     "m_ObjectId": "400c054cd35249e180257b0a1bc908c1",
     "m_Title": "Time Offset",
     "m_Position": {
-        "x": -3664.0,
-        "y": -1881.0
+        "x": -3664.000244140625,
+        "y": -1880.999755859375
     }
 }
 
@@ -9425,10 +9425,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 4205.0,
-            "y": 234.0000457763672,
-            "width": 118.0,
-            "height": 33.99998474121094
+            "x": 4644.0,
+            "y": 691.999755859375,
+            "width": 126.0,
+            "height": 77.0
         }
     },
     "m_Slots": [
@@ -10118,8 +10118,8 @@
     "m_ObjectId": "8b5cbd77cec14a4dacd05fd613150ad0",
     "m_Title": "Shadow",
     "m_Position": {
-        "x": 2940.0,
-        "y": -1678.0
+        "x": 2940.000244140625,
+        "y": -1677.9998779296875
     }
 }
 
@@ -11009,10 +11009,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 5131.0,
-            "y": -515.0,
-            "width": 208.0,
-            "height": 326.00006103515627
+            "x": 5569.99951171875,
+            "y": -57.000144958496097,
+            "width": 208.00048828125,
+            "height": 326.0000305175781
         }
     },
     "m_Slots": [
@@ -11464,10 +11464,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 4760.0,
-            "y": -415.0,
-            "width": 128.0,
-            "height": 34.0
+            "x": 5199.0,
+            "y": 42.99996566772461,
+            "width": 208.0,
+            "height": 127.00003051757813
         }
     },
     "m_Slots": [
@@ -12548,10 +12548,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 4057.0,
-            "y": -150.99996948242188,
-            "width": 208.0,
-            "height": 311.9999694824219
+            "x": 4495.99951171875,
+            "y": 306.9999084472656,
+            "width": 208.00048828125,
+            "height": 311.9998474121094
         }
     },
     "m_Slots": [
@@ -13724,8 +13724,8 @@
     "m_ObjectId": "c480e151205f4f86b8cdf8338e2b6aa6",
     "m_Title": "Wind Time Offset",
     "m_Position": {
-        "x": -3746.0,
-        "y": -1619.0
+        "x": -3746.000244140625,
+        "y": -1618.999755859375
     }
 }
 
@@ -13859,8 +13859,8 @@
     "m_ObjectId": "c74af044aa91430eae0138f027fcc034",
     "m_Title": "Grass Interaction",
     "m_Position": {
-        "x": -567.0,
-        "y": -1544.0
+        "x": -567.000244140625,
+        "y": -1543.999755859375
     }
 }
 
@@ -14134,8 +14134,8 @@
     "m_ObjectId": "ccc2921591144f7f91bdd0032f064a34",
     "m_Title": "Wind",
     "m_Position": {
-        "x": -3209.0,
-        "y": -1157.0
+        "x": -3209.000244140625,
+        "y": -1157.0003662109375
     }
 }
 
@@ -16062,10 +16062,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 4389.0,
-            "y": -68.99998474121094,
+            "x": 4828.0,
+            "y": 388.9997253417969,
             "width": 120.0,
-            "height": 148.99998474121095
+            "height": 149.00009155273438
         }
     },
     "m_Slots": [
@@ -16401,10 +16401,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": 4691.0,
-            "y": -21.999998092651368,
-            "width": 208.00048828125,
-            "height": 302.0000305175781
+            "x": 5130.0,
+            "y": 435.9999084472656,
+            "width": 208.0,
+            "height": 302.0001525878906
         }
     },
     "m_Slots": [
@@ -16681,7 +16681,7 @@
     "m_Title": "Scale and Rotation",
     "m_Position": {
         "x": -6333.0,
-        "y": -1448.0
+        "y": -1447.9998779296875
     }
 }
 

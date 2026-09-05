@@ -33,5 +33,5 @@ Material:
     - _InvertAlpha: 0
     - _UseLuminance: 0
     m_Colors:
-    - _BaseColor: {r: 0.54901963, g: 0.427451, b: 0.2784314, a: 1}
+    - _BaseColor: {r: 0.11443538, g: 0.06480328, b: 0.027320892, a: 1}
   m_BuildTextureStacks: []
