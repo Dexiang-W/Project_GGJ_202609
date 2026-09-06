@@ -942,6 +942,10 @@ public class GameFlowController : MonoBehaviour
     /// </summary>
     private static bool WasStartPressed()
     {
+        // 暂停菜单打开期间（或刚点完「继续游戏」的瞬间）不把点击/按键当成开局
+        if (PauseMenuManager.IsPaused || Time.unscaledTime < PauseMenuManager.BlockTitleStartUntil)
+            return false;
+
 #if ENABLE_INPUT_SYSTEM
         Keyboard keyboard = Keyboard.current;
         if (keyboard != null &&

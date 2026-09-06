@@ -128,6 +128,9 @@ public class GameplayHUD : MonoBehaviour
 
     private void Update()
     {
+        // 暂停菜单弹出期间不消耗能量
+        if (PauseMenuManager.IsPaused) return;
+
         // Q 键消耗一格能量（无能量时忽略）；成功消耗播放 SFX_Energy_Return
         if (WasQPressedThisFrame() && CurrentEnergy > 0)
         {
