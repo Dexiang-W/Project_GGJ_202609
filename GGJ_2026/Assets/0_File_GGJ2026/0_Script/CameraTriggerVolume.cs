@@ -39,6 +39,12 @@ public class CameraTriggerVolume : MonoBehaviour
 
     private bool warnedMissingCamera;
 
+    /// <summary>
+    /// 重生/传送流程期间置 true，临时屏蔽“因传送被放入某相机触发区”而触发的相机切换
+    /// （拉远 / 固定机位等）。玩家的自由移动解锁（unlockWASDWhileInside）不受影响。
+    /// </summary>
+    public static bool SuppressCameraSwitching { get; set; }
+
     private void OnEnable()
     {
         ResolveCameraController();
@@ -64,6 +70,10 @@ public class CameraTriggerVolume : MonoBehaviour
             }
             return;
         }
+
+        // 重生传送期间：落点若在触发区内，不因“被传送进来”而切换相机（自由移动解锁仍生效）
+        if (SuppressCameraSwitching)
+            return;
 
         switch (modeOnEnter)
         {

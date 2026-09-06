@@ -422,6 +422,10 @@ public class GameFlowController : MonoBehaviour
             playerInputs.SprintInput(false);
         }
 
+        // 一进入正式关卡（画面还处于黑幕）就创建 HUD：
+        // 左上角能量三格（空能量，浅绿）随黑幕淡出一起出现，而不是等碰到能量拾取物才显示。
+        GameplayHUD.EnsureCreated();
+
         if (attractSceneRoot != null)
             attractSceneRoot.SetActive(false);
 
@@ -714,6 +718,9 @@ public class GameFlowController : MonoBehaviour
         // 交还角色控制
         SetPlayerInputEnabled(true);
 
+        // 正式游玩开始时创建左上角能量 HUD（三格绿点 / Q 消耗 / 黑幕文字层），标题阶段不会出现
+        GameplayHUD.EnsureCreated();
+
         state = GameFlowState.Playing;
         sequenceStarted = false;
     }
@@ -866,6 +873,19 @@ public class GameFlowController : MonoBehaviour
             else
                 AudioSource.PlayClipAtPoint(spawnSound, position);
         }
+    }
+
+    /// <summary>停止本控制器管理的旧音乐/音效源（正式关卡 BGM 转交 AudioManager 后调用，避免双份音乐叠加）。</summary>
+    public void StopBackgroundAudio()
+    {
+        if (musicSource != null)
+        {
+            musicSource.Stop();
+            musicSource.clip = null;
+        }
+
+        if (audioSource != null)
+            audioSource.Stop();
     }
 
     private void PlayMusic(AudioClip clip)
