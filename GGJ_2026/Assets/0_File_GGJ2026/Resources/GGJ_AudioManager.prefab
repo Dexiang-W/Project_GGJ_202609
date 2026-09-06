@@ -45,9 +45,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   musicClip: {fileID: 8300000, guid: 3fbd27c0be360e04f90478775eb646c0, type: 3}
-  musicVolume: 0.5
+  musicVolume: 0.3
   ambienceClip: {fileID: 8300000, guid: 8e99e6ca2642d5446a2ace74f19a8bed, type: 3}
-  ambienceVolume: 0.1
+  ambienceVolume: 0.2
   ambienceSceneName: Level1
   pickupClip: {fileID: 8300000, guid: 5ce800d3647e13647a1b2dab4be88736, type: 3}
   returnClip: {fileID: 8300000, guid: 621693ba6443c334a925563838c5463b, type: 3}
@@ -72,3 +72,4 @@ MonoBehaviour:
   - {fileID: 8300000, guid: a8e1e002fc1eb4b479ec6e4abc636159, type: 3}
   - {fileID: 8300000, guid: 20216e91935810f4bba365a8f1929629, type: 3}
   sfxVolume: 1
+  footstepBoost: 1.15

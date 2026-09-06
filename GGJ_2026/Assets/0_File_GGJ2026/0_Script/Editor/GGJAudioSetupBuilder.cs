@@ -103,9 +103,10 @@ public static class GGJAudioSetupBuilder
         am.ambienceSceneName = "Level1";
 
         // 响度规范（可在预制体上再微调）：
-        //   环境音微微可闻 < 音乐中等 < 一次性音效最大且明显盖过其它
-        am.musicVolume = 0.5f;
-        am.ambienceVolume = 0.1f;
+        //   音乐收敛做垫底 < 环境音明显可闻 < 一次性音效最大且明显盖过其它
+        //   脚步声有独立 footstepBoost 增益（默认 1.15，稍响于其它 SFX）
+        am.musicVolume = 0.3f;
+        am.ambienceVolume = 0.2f;
         am.sfxVolume = 1f;
 
         // 覆盖同名预制体

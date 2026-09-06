@@ -10,6 +10,10 @@ using UnityEngine;
 ///   · 1 格能量：中档弹力；
 ///   · 2 格及以上：高档弹力。
 /// 需要玩家带能量跑图时，建议把能量拾取物（EnergyPickup）放在附近必经之路。
+///
+/// 触发可靠性：OnTriggerEnter 与 OnTriggerStay 都会判触发（受 retriggerCooldown 限制）。
+/// 只依赖 Enter 时，如果玩家起跳/传送后“已经处于板内”而没发生一次“从外到内”的穿越，
+/// 就永远收不到进入事件 → 表现为时好时坏；加上 Stay 后只要人还在板里且冷却结束即可触发。
 /// </summary>
 [DisallowMultipleComponent]
 public class BouncePad : MonoBehaviour
@@ -32,6 +36,17 @@ public class BouncePad : MonoBehaviour
     private float lastLaunchTime = -100f;
 
     private void OnTriggerEnter(Collider other)
+    {
+        TryLaunchPlayer(other);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        // 防止玩家被弹起后仍在板内那几帧内重复判定（冷却在 TryLaunchPlayer 里统一限制）
+        TryLaunchPlayer(other);
+    }
+
+    private void TryLaunchPlayer(Collider other)
     {
         if (!other.CompareTag(playerTag))
             return;

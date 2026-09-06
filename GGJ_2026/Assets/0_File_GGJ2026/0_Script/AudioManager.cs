@@ -3,9 +3,10 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 正式关卡（Level1）的统一音效管理：
-///  · 背景音乐：MUS_Gameplay_Main 全程循环，音量中等（比环境音响、但不压过一次性音效）；
-///  · 场景环境音：Level1 用 AMB_Lab_Main 循环，音量很低（微微可闻）；
+///  · 背景音乐：MUS_Gameplay_Main 全程循环，音量收敛做垫底（明显小于 SFX）；
+///  · 场景环境音：Level1 用 AMB_Lab_Main 循环，音量适中（能明显听到氛围声）；
 ///  · 一次性音效（拾取能量 / Q 消耗 / 交互注入 / 脚步、跳跃、落地）走独立通道，响度最大，明显盖过其它声音；
+///  · 脚步声带额外增益（footstepBoost），比其它 SFX 再响一点；
 ///  · 带变体的素材（脚步/跳跃/落地）每次随机抽一个，且避免连续抽到同一条。
 ///
 /// 使用方式：
@@ -25,15 +26,15 @@ public class AudioManager : MonoBehaviour
     [Tooltip("MUS_Gameplay_Main")]
     public AudioClip musicClip;
     [Range(0f, 1f)]
-    [Tooltip("背景音量：比环境音大声、但又不能盖过 SFX（默认 0.5 左右）")]
-    public float musicVolume = 0.5f;
+    [Tooltip("背景音量：收敛做垫底，明显小于 SFX（默认 0.3 左右）")]
+    public float musicVolume = 0.3f;
 
-    [Header("场景环境音（Level1，循环且很轻）")]
+    [Header("场景环境音（Level1，循环）")]
     [Tooltip("AMB_Lab_Main")]
     public AudioClip ambienceClip;
     [Range(0f, 1f)]
-    [Tooltip("环境音音量：微微能听到即可")]
-    public float ambienceVolume = 0.1f;
+    [Tooltip("环境音音量：要能明显听到氛围声（默认 0.2 左右）")]
+    public float ambienceVolume = 0.2f;
     [Tooltip("只在“此场景名”里播放环境音（离开自动停）")]
     public string ambienceSceneName = "Level1";
 
@@ -57,6 +58,9 @@ public class AudioManager : MonoBehaviour
     [Range(0f, 1f)]
     [Tooltip("一次性音效统一音量（尽量保持 1，保证明显盖过音乐/环境音）")]
     public float sfxVolume = 1f;
+    [Range(0.5f, 2f)]
+    [Tooltip("脚步声相对其它 SFX 的额外增益（1 = 与其它音效同响；调大则脚步声更明显）")]
+    public float footstepBoost = 1.15f;
 
     // 三个独立音源：音乐 / 环境音 / 一次性音效
     private AudioSource musicSource;
@@ -166,17 +170,18 @@ public class AudioManager : MonoBehaviour
     public void PlayPickup()      => PlayOneShot(pickupClip);
     public void PlayEnergyReturn() => PlayOneShot(returnClip);
     public void PlayInject()      => PlayOneShot(injectClip);
-    public void PlayFootstep()    => PlayOneShot(PickRandom(footstepClips, ref lastFootstepIndex));
+    public void PlayFootstep()    => PlayOneShot(PickRandom(footstepClips, ref lastFootstepIndex), sfxVolume * footstepBoost);
     public void PlayJump()        => PlayOneShot(PickRandom(jumpClips, ref lastJumpIndex));
     public void PlayLand()        => PlayOneShot(PickRandom(landClips, ref lastLandIndex));
 
-    private void PlayOneShot(AudioClip clip)
+    private void PlayOneShot(AudioClip clip, float volumeScale = -1f)
     {
         if (clip == null)
             return;
 
         CreateAudioSources();
-        sfxSource.PlayOneShot(clip, sfxVolume);
+        // volumeScale < 0 表示走默认 sfxVolume
+        sfxSource.PlayOneShot(clip, volumeScale >= 0f ? volumeScale : sfxVolume);
     }
 
     /// <summary>从数组里随机抽一个素材，尽量不与上一次重复。</summary>
