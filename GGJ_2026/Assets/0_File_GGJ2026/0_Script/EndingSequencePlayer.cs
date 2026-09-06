@@ -18,9 +18,12 @@ using UnityEngine.InputSystem;
 ///     或者在任何脚本 / 机关事件里直接调用 xxx.Play()。
 ///   4. 所有字幕、报幕文案、字号、时长都在本组件 Inspector 里编辑（都可留空跳过对应阶段）。
 ///
-/// 结束行为两种（看结局需要）：
-///   · stayOnBlackAfterFinish 勾选：报幕滚完停在黑屏（典型结局画面），适合再接“跳转标题”等命令；
-///   · 不勾：黑幕淡出、交还操作，继续回到游戏。
+/// 结束行为（看结局需要）：
+///   · returnToTitleAfterFinish 勾选（默认）：报幕滚完 → OnFinished 触发 → 稍停后自动
+///     清掉跨场景常驻的玩家/相机/流程对象，回到标题场景（Begin_Menu）重新开始完整流程；
+///   · stayOnBlackAfterFinish 勾选（且不回标题）：报幕滚完停在黑屏（典型结局画面），
+///     可把 OnFinished 接到“显示结束面板”等命令；
+///   · 都不勾：黑幕淡出、交还操作，继续回到游戏。
 /// </summary>
 [DisallowMultipleComponent]
 public class EndingSequencePlayer : MonoBehaviour
@@ -77,8 +80,18 @@ public class EndingSequencePlayer : MonoBehaviour
     [Header("⑤ 结束行为")]
     [Tooltip("勾选 = 报幕滚完停在黑屏（典型结局）；不勾 = 黑幕淡出、恢复操作继续游戏")]
     [SerializeField] private bool stayOnBlackAfterFinish = true;
-    [Tooltip("报幕滚完时触发（可挂“跳到标题 / 显示结束面板”等命令）")]
+    [Tooltip("报幕滚完时触发（可挂“显示结束面板 / 收尾音效”等命令）")]
     public UnityEvent OnFinished = new UnityEvent();
+
+    [Header("⑥ 结束后回到标题（重新游玩）")]
+    [Tooltip("勾选（默认）= OnFinished 触发后，自动清理跨场景常驻的玩家/相机/流程对象，\n" +
+             "回到标题场景（Begin_Menu）重新开始完整流程（灰屏循环跑 → 点击开始 → Level1）。\n" +
+             "结局看完直接 LoadScene 会重复出两个玩家/两个流程控制器，必须先清场，故走 GameTitleRestart。")]
+    [SerializeField] private bool returnToTitleAfterFinish = true;
+    [Tooltip("要回去的标题场景名（须已加入 Build Settings，本项目默认 Begin_Menu）")]
+    [SerializeField] private string titleSceneName = "Begin_Menu";
+    [Tooltip("OnFinished 触发后、真正切回标题前的黑屏停留秒数（给“最后一句提示 / 收尾音效”留时间）")]
+    [SerializeField] private float returnDelaySeconds = 1.2f;
 
     // ---------------------------------------------------------------- 运行时
 
@@ -109,6 +122,16 @@ public class EndingSequencePlayer : MonoBehaviour
 
         isPlaying = true;
         StartCoroutine(SequenceRoutine());
+    }
+
+    /// <summary>
+    /// 清掉跨场景常驻对象并回到标题场景（Begin_Menu），重新开始一局完整游玩。
+    /// 可挂到 OnFinished 事件，或由“结束按钮 / 其它脚本”直接调用。
+    /// </summary>
+    [ContextMenu("回到标题场景，重新游玩")]
+    public void ReturnToTitleAndRestart()
+    {
+        GameTitleRestart.ReturnToTitle(titleSceneName);
     }
 
     // ---------------------------------------------------------------- 主流程
@@ -155,7 +178,21 @@ public class EndingSequencePlayer : MonoBehaviour
             yield return ScrollCreditsRoutine(creditsLines);
 
         // 4. 结束
+        // 先记下“是否要回标题”，再触发 OnFinished：OnFinished 里挂的命令
+        // 若把本物体销毁/切场景，也不会影响下面判断要走的回标题流程。
+        bool autoReturn = returnToTitleAfterFinish;
         OnFinished?.Invoke();
+
+        if (autoReturn)
+        {
+            // 给 OnFinished 里挂的收尾提示 / 音效留一点黑屏演出时间，再整体清场回标题
+            yield return new WaitForSecondsRealtime(Mathf.Max(0f, returnDelaySeconds));
+
+            isPlaying = false;
+            // 清掉跨场景常驻对象并回标题（见 GameTitleRestart.cs 注释）；当前场景随后会被卸载
+            GameTitleRestart.ReturnToTitle(titleSceneName);
+            yield break;
+        }
 
         if (!stayOnBlackAfterFinish)
         {
@@ -165,7 +202,7 @@ public class EndingSequencePlayer : MonoBehaviour
             if (canvas != null) canvas.gameObject.SetActive(false);
             RestorePlayerInput();
         }
-        // stayOnBlackAfterFinish == true：黑屏停留，操作保持锁定（OnFinished 可负责跳标题/重开等）
+        // stayOnBlackAfterFinish == true：黑屏停留，操作保持锁定（可把 OnFinished 接到“显示结束面板”等）
 
         isPlaying = false;
     }

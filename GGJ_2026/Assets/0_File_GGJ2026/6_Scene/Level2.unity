@@ -5139,39 +5139,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8377402649affa947a67d95e5d08fbaa, type: 3}
---- !u!21 &717578922
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: SandStorm_ParticleMat
-  m_Shader: {fileID: 4800000, guid: 13671c380631170409759d59808921dd, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
-  stringTagMap:
-    RenderType: Transparent
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats: []
-    m_Colors:
-    - _Tint: {r: 1, g: 1, b: 1, a: 1}
-  m_BuildTextureStacks: []
 --- !u!1 &741095986
 GameObject:
   m_ObjectHideFlags: 0
@@ -6196,17 +6163,17 @@ PrefabInstance:
     - target: {fileID: 1121834210139245815, guid: 89607423ecf28ec4f864fa43c0a4c595,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8658414315781812722, guid: 89607423ecf28ec4f864fa43c0a4c595,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.11714554
+      value: 100.42734
       objectReference: {fileID: 0}
     - target: {fileID: 8658414315781812722, guid: 89607423ecf28ec4f864fa43c0a4c595,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.50000095
+      value: 8.544507
       objectReference: {fileID: 0}
     - target: {fileID: 8658414315781812722, guid: 89607423ecf28ec4f864fa43c0a4c595,
         type: 3}
@@ -43539,7 +43506,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 569e3f476367a53448dc8f8cfd0b866a,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 165.74
+      value: 164.8504
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 569e3f476367a53448dc8f8cfd0b866a,
         type: 3}
@@ -43549,7 +43516,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 569e3f476367a53448dc8f8cfd0b866a,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 9.33
+      value: 7.411523
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 569e3f476367a53448dc8f8cfd0b866a,
         type: 3}
@@ -44704,6 +44671,39 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 1311603461}
   m_PrefabAsset: {fileID: 0}
+--- !u!21 &1330376465
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SandStorm_ParticleMat
+  m_Shader: {fileID: 4800000, guid: 13671c380631170409759d59808921dd, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats: []
+    m_Colors:
+    - _Tint: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
 --- !u!4 &1330523531 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 287d0fb38023fa049b198db643c7b964,
@@ -46008,7 +46008,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 717578922}
+  - {fileID: 1330376465}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -86325,12 +86325,12 @@ PrefabInstance:
     - target: {fileID: 3425480648518983487, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 164.8
+      value: 265.34448
       objectReference: {fileID: 0}
     - target: {fileID: 3425480648518983487, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: -3.039013
+      value: 5.005493
       objectReference: {fileID: 0}
     - target: {fileID: 3425480648518983487, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
@@ -86380,17 +86380,17 @@ PrefabInstance:
     - target: {fileID: 7911495985406262998, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8910237657613463205, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 29.699997
+      value: -70.84448
       objectReference: {fileID: 0}
     - target: {fileID: 8910237657613463205, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 10.62
+      value: 2.0754938
       objectReference: {fileID: 0}
     - target: {fileID: 8910237657613463205, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
@@ -87425,7 +87425,7 @@ Transform:
   m_GameObject: {fileID: 1872919964}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -15, y: 6.5, z: 2.5}
+  m_LocalPosition: {x: -22, y: 6.5, z: 0.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
