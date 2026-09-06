@@ -11,6 +11,15 @@ namespace StarterAssets
 #endif
     public class ThirdPersonController : MonoBehaviour
     {
+        /// <summary>
+        /// 运行时玩家入口。玩家在 Bandeng_Test 场景里被 DontDestroyOnLoad 保留，
+        /// Level1 里的脚本（如 CameraTriggerVolume）无法在 Inspector 直接拖它，运行时用这个静态引用解析。
+        /// </summary>
+        public static ThirdPersonController Instance { get; private set; }
+
+        /// <summary>当前是否处于“自由移动”状态（WASD 全向移动，默认 false = 强制横向只左右）。</summary>
+        public bool FreeMovementEnabled => freeMoveDepth > 0;
+
         [Header("Player")]
         [Tooltip("角色朝右时的Y轴旋转角度（默认90°）")]
         public float RightFacingAngle = 90f;
@@ -105,6 +114,16 @@ namespace StarterAssets
         private bool _hasAnimator;
         private bool _wasGravityInverted;
 
+        // 自由移动区域计数：进入 CameraTriggerVolume（勾了解锁WASD）加一、离开减一，
+        // 用计数而不是布尔，避免玩家同时待在多个解锁区域内、离开其中一个就被错误锁回。
+        private int freeMoveDepth;
+
+        /// <summary>进入一个“自由移动区”：+1，期间 WASD 全向移动。</summary>
+        public void EnableFreeMovement() => freeMoveDepth++;
+
+        /// <summary>离开一个“自由移动区”：-1（减到 0 后恢复默认的强制横向移动）。</summary>
+        public void DisableFreeMovement() => freeMoveDepth = Mathf.Max(0, freeMoveDepth - 1);
+
         private bool IsCurrentDeviceMouse
         {
             get
@@ -123,6 +142,15 @@ namespace StarterAssets
             {
                 _mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
             }
+
+            if (Instance == null)
+                Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
         }
 
         private void Start()
@@ -213,8 +241,15 @@ namespace StarterAssets
 
         private void Move()
         {
-            // ----- 正常的玩家控制（只左右移动） -----
-            Vector2 horizontalInput = new Vector2(_input.move.x, 0f);
+            bool freeMove = FreeMovementEnabled;
+
+            // ----- 玩家的移动输入 -----
+            // 默认：强制横向移动，只取 X（左右），忽略 W/S 的纵向输入；
+            // 处于“自由移动区”时：WASD 全向移动（A/D=世界X 左右，W/S=世界Z 前后）。
+            Vector2 rawInput = _input.move;
+            Vector2 horizontalInput = freeMove
+                ? rawInput
+                : new Vector2(rawInput.x, 0f);
 
             float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
             if (horizontalInput == Vector2.zero) targetSpeed = 0.0f;
@@ -238,12 +273,27 @@ namespace StarterAssets
             _animationBlend = Mathf.Lerp(_animationBlend, targetSpeed, Time.deltaTime * SpeedChangeRate);
             if (_animationBlend < 0.01f) _animationBlend = 0f;
 
-            Vector3 moveDirection = Vector3.right * horizontalInput.x;
+            // 自由移动：角色沿输入方向跑（XZ 平面全向）；默认：只沿世界 X 左右跑
+            Vector3 moveDirection = freeMove
+                ? new Vector3(horizontalInput.x, 0f, horizontalInput.y)
+                : Vector3.right * horizontalInput.x;
             if (InvertGravity) moveDirection.x *= -1.0f;
 
             if (moveDirection != Vector3.zero)
             {
-                float targetAngle = moveDirection.x > 0 ? RightFacingAngle : LeftFacingAngle;
+                float targetAngle;
+                if (freeMove)
+                {
+                    // 自由移动：面朝实际移动方向（平面角度）
+                    targetAngle = Mathf.Atan2(moveDirection.x, moveDirection.z) * Mathf.Rad2Deg;
+                    if (InvertGravity) targetAngle += 180f;
+                }
+                else
+                {
+                    // 强制横向：只向左或向右摆向
+                    targetAngle = moveDirection.x > 0 ? RightFacingAngle : LeftFacingAngle;
+                }
+
                 float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref _rotationVelocity, RotationSmoothTime);
                 float characterRoll = InvertGravity ? 180.0f : 0.0f;
                 transform.rotation = Quaternion.Euler(0.0f, rotation, characterRoll);

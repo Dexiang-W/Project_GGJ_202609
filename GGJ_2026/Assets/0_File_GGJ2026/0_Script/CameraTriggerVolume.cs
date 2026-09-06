@@ -1,6 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
-using Unity.VisualScripting;
+using StarterAssets;
 using UnityEngine;
 
 public class CameraTriggerVolume : MonoBehaviour
@@ -31,6 +29,11 @@ public class CameraTriggerVolume : MonoBehaviour
     [Header("离开后行为")]
     [SerializeField] private bool restoreOnExit = false;
 
+    [Header("自由移动区（可选）")]
+    [Tooltip("勾选后：玩家进入该区域期间解锁 WASD（可在 XZ 平面全向自由移动）；" +
+             "走出区域自动恢复默认的强制横向移动（只左右）。\n与上方相机模式互不影响，可以不填相机设置单独用作自由移动区。")]
+    [SerializeField] private bool unlockWASDWhileInside = false;
+
     [Header("玩家标签")]
     [SerializeField] private string playerTag = "Player";
 
@@ -45,6 +48,10 @@ public class CameraTriggerVolume : MonoBehaviour
     {
         if (!other.CompareTag(playerTag))
             return;
+
+        // 自由移动解锁（进入 +1）
+        if (unlockWASDWhileInside)
+            ResolveTriggeredPlayer(other)?.EnableFreeMovement();
 
         ResolveCameraController();
         if (cameraController == null)
@@ -79,7 +86,14 @@ public class CameraTriggerVolume : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        if (!other.CompareTag(playerTag) || !restoreOnExit)
+        if (!other.CompareTag(playerTag))
+            return;
+
+        // 自由移动恢复（离开 -1，无论相机是否要恢复都执行）
+        if (unlockWASDWhileInside)
+            ResolveTriggeredPlayer(other)?.DisableFreeMovement();
+
+        if (!restoreOnExit)
             return;
 
         ResolveCameraController();
@@ -106,5 +120,24 @@ public class CameraTriggerVolume : MonoBehaviour
 
         // 兜底：某些测试场景里相机没走 Instance 注册，再全局找一次
         cameraController = FindObjectOfType<CameraFollowController>();
+    }
+
+    /// <summary>
+    /// 运行时解析触发区的玩家：优先用触发碰撞体上的 ThirdPersonController；
+    /// 再回退到 ThirdPersonController.Instance（正式流程里玩家同样从 Bandeng_Test 跨场景保留）。
+    /// </summary>
+    private ThirdPersonController ResolveTriggeredPlayer(Collider other)
+    {
+        ThirdPersonController player = other != null
+            ? other.GetComponentInParent<ThirdPersonController>()
+            : null;
+
+        if (player == null)
+            player = ThirdPersonController.Instance;
+
+        if (player == null)
+            player = FindObjectOfType<ThirdPersonController>();
+
+        return player;
     }
 }
