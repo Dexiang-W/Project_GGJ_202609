@@ -200,6 +200,23 @@ namespace StarterAssets
             InvertGravity = !InvertGravity;
         }
 
+        /// <summary>
+        /// 把角色竖直弹起（弹跳板 BouncePad 等使用）。沿当前世界的“上”方向给速度，
+        /// 兼容 InvertGravity（翻转重力时会在翻转后的“上”方向弹）。数值为速率绝对值。
+        /// </summary>
+        public void LaunchUp(float strength)
+        {
+            if (strength <= 0f)
+                return;
+
+            float target = Mathf.Abs(strength);
+            if (_verticalVelocity < target)
+            {
+                _verticalVelocity = target;
+                _fallTimeoutDelta = FallTimeout;
+            }
+        }
+
         private void AssignAnimationIDs()
         {
             _animIDSpeed = Animator.StringToHash("Speed");
@@ -336,6 +353,10 @@ namespace StarterAssets
                     {
                         _animator.SetBool(_animIDJump, true);
                     }
+
+                    // 起跳音效（SFX_Player_Jump_x 随机）
+                    if (AudioManager.Instance != null)
+                        AudioManager.Instance.PlayJump();
                 }
 
                 if (_jumpTimeoutDelta >= 0.0f)
@@ -423,10 +444,15 @@ namespace StarterAssets
         {
             if (animationEvent.animatorClipInfo.weight > 0.5f)
             {
-                if (FootstepAudioClips.Length > 0)
+                // 优先用 Inspector 里手动指定的脚步素材；没指定时自动走 AudioManager 的 Lab 脚步随机池
+                if (FootstepAudioClips != null && FootstepAudioClips.Length > 0)
                 {
                     var index = Random.Range(0, FootstepAudioClips.Length);
                     AudioSource.PlayClipAtPoint(FootstepAudioClips[index], transform.TransformPoint(_controller.center), FootstepAudioVolume);
+                }
+                else if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.PlayFootstep();
                 }
             }
         }
@@ -435,7 +461,15 @@ namespace StarterAssets
         {
             if (animationEvent.animatorClipInfo.weight > 0.5f)
             {
-                AudioSource.PlayClipAtPoint(LandingAudioClip, transform.TransformPoint(_controller.center), FootstepAudioVolume);
+                // 优先用手动指定的落地素材；没指定时自动走 AudioManager 的落地随机池
+                if (LandingAudioClip != null)
+                {
+                    AudioSource.PlayClipAtPoint(LandingAudioClip, transform.TransformPoint(_controller.center), FootstepAudioVolume);
+                }
+                else if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.PlayLand();
+                }
             }
         }
     }

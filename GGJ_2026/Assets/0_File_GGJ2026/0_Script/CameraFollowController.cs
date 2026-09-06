@@ -289,24 +289,48 @@ public class CameraFollowController : MonoBehaviour
         blendTimer = 0f;   // 终止未完成的机位过渡
 
         Vector3 desired = transform.position;
+        Quaternion desiredRotation = transform.rotation;
+        float desiredFOV = cam != null ? cam.fieldOfView : initialFOV;
+        bool snapPose = false;
 
         switch (currentMode)
         {
             case CameraMode.Normal:
                 if (followTarget != null)
                     desired = followTarget.position + offset;
+                desiredFOV = initialFOV;
+                desiredRotation = GetFollowRotation();
+                snapPose = true;
                 break;
             case CameraMode.ZoomedFollow:
                 if (followTarget != null)
                     desired = followTarget.position + pendingOffset;
+                desiredFOV = pendingFOV;
+                desiredRotation = GetFollowRotation();
+                snapPose = true;
                 break;
             case CameraMode.LockedPoint:
                 if (pendingFixedPoint != null)
+                {
                     desired = pendingFixedPoint.position;
+                    desiredFOV = pendingFOV;
+                    desiredRotation = pendingFixedPoint.rotation;
+                    snapPose = true;
+                }
                 break;
         }
 
         transform.position = desired;
+
+        // 位置 / 旋转 / FOV 一起就位到该模式的目标值：重生、循环回卷这类瞬移后
+        // 不会出现“位置到了、镜头还在慢慢转头/变焦”的残留观感
+        if (snapPose)
+        {
+            transform.rotation = desiredRotation;
+            if (cam != null) cam.fieldOfView = desiredFOV;
+            targetRotation = desiredRotation;
+            targetFOV = desiredFOV;
+        }
     }
 
     private void OnDestroy()
