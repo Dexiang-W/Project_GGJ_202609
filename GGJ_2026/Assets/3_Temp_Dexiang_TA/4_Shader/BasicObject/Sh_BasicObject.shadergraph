@@ -2781,7 +2781,7 @@
     "m_ObjectId": "0679bcc1ac9b47618a1c29570ec271bb",
     "m_Title": "BackLight",
     "m_Position": {
-        "x": -2608.0,
+        "x": -2607.999755859375,
         "y": 1186.0
     }
 }
@@ -4350,8 +4350,8 @@
     "m_ObjectId": "2990e94cd53a495582891a86b823d820",
     "m_Title": "Shadow - LerpSelShading",
     "m_Position": {
-        "x": -1253.0,
-        "y": 409.0
+        "x": -1253.000244140625,
+        "y": 408.99993896484377
     }
 }
 
@@ -4503,8 +4503,8 @@
     "m_ObjectId": "2e067f6c6cf84748b4fe794e33b6086b",
     "m_Title": "Lighting - Lambert",
     "m_Position": {
-        "x": -2541.0,
-        "y": 508.0
+        "x": -2540.999755859375,
+        "y": 507.99993896484377
     }
 }
 
@@ -4990,7 +4990,7 @@
     "m_ObjectId": "35e56ec493714d33b34e8d327db20b3f",
     "m_Title": "Matcap",
     "m_Position": {
-        "x": 1157.0,
+        "x": 1156.999755859375,
         "y": -34.0
     }
 }
@@ -8244,7 +8244,7 @@
     "m_ObjectId": "73b4873608604de3af3bd53a42eda24d",
     "m_Title": "Fresnel",
     "m_Position": {
-        "x": -1422.0,
+        "x": -1422.000244140625,
         "y": 1993.0
     }
 }
@@ -9313,8 +9313,8 @@
     "m_ObjectId": "83759c4c894b4494a40be39725bb40fa",
     "m_Title": "Outline - Scene Depth ",
     "m_Position": {
-        "x": -2864.0,
-        "y": -623.0
+        "x": -2863.99951171875,
+        "y": -623.0001831054688
     }
 }
 
