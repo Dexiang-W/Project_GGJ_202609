@@ -44,14 +44,38 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56e4f7e0bc5cc2d4d8652f9db1f3529b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  musicClip: {fileID: 8300000, guid: 3fbd27c0be360e04f90478775eb646c0, type: 3}
+  musicClip: {fileID: 0}
   musicVolume: 0.3
   ambienceClip: {fileID: 8300000, guid: 8e99e6ca2642d5446a2ace74f19a8bed, type: 3}
   ambienceVolume: 0.2
   ambienceSceneName: Level1
+  sceneAudioProfiles:
+  - sceneName: Level1
+    musicClip: {fileID: 8300000, guid: 3fbd27c0be360e04f90478775eb646c0, type: 3}
+    musicVolume: 0
+    ambienceClip: {fileID: 8300000, guid: d5199509e17576e448dc18257cd91947, type: 3}
+    ambienceVolume: 0.5
+  - sceneName: Level2
+    musicClip: {fileID: 8300000, guid: 3fbd27c0be360e04f90478775eb646c0, type: 3}
+    musicVolume: 0
+    ambienceClip: {fileID: 8300000, guid: d5199509e17576e448dc18257cd91947, type: 3}
+    ambienceVolume: 0.2
+  - sceneName: Level3+4
+    musicClip: {fileID: 8300000, guid: 3fbd27c0be360e04f90478775eb646c0, type: 3}
+    musicVolume: 0.3
+    ambienceClip: {fileID: 8300000, guid: 27ae88ee77979c14394536780e9da11d, type: 3}
+    ambienceVolume: 0.2
+  - sceneName: Level5
+    musicClip: {fileID: 8300000, guid: 3fbd27c0be360e04f90478775eb646c0, type: 3}
+    musicVolume: 0.3
+    ambienceClip: {fileID: 8300000, guid: 8e99e6ca2642d5446a2ace74f19a8bed, type: 3}
+    ambienceVolume: 0.2
+  musicFadeSeconds: 1.5
+  ambienceFadeSeconds: 1
   pickupClip: {fileID: 8300000, guid: 5ce800d3647e13647a1b2dab4be88736, type: 3}
   returnClip: {fileID: 8300000, guid: 621693ba6443c334a925563838c5463b, type: 3}
   injectClip: {fileID: 8300000, guid: b234780e9a7b9a043ba33005f4489ec4, type: 3}
+  bounceClip: {fileID: 8300000, guid: 9e2612b776fa1c14fb6384cb6a828cf0, type: 3}
   footstepClips:
   - {fileID: 8300000, guid: 524e5f05976cfed4aaf572c17c2cf8fa, type: 3}
   - {fileID: 8300000, guid: 66e7d4a35d1d41c4ab288d3a93123929, type: 3}
@@ -71,5 +95,42 @@ MonoBehaviour:
   - {fileID: 8300000, guid: a37712a28dc569946a2813641851a1f1, type: 3}
   - {fileID: 8300000, guid: a8e1e002fc1eb4b479ec6e4abc636159, type: 3}
   - {fileID: 8300000, guid: 20216e91935810f4bba365a8f1929629, type: 3}
+  grassStepClips:
+  - {fileID: 8300000, guid: cefa7c97218f295488998d764ed32e8b, type: 3}
+  - {fileID: 8300000, guid: 90c82f5288460994284c76524f2f0048, type: 3}
+  - {fileID: 8300000, guid: 4e41bcf711c4dea4690745c19408da2c, type: 3}
+  - {fileID: 8300000, guid: ef24fcecd2bfdcd468b4b4aff3eef178, type: 3}
+  - {fileID: 8300000, guid: 5e73492302933bb48823c6bfb0978cd4, type: 3}
+  - {fileID: 8300000, guid: ee5da340052f5814180e1f682dec2679, type: 3}
+  sandStepClips:
+  - {fileID: 8300000, guid: 2018887ab5e237b41aff26ce0bc4c10e, type: 3}
+  - {fileID: 8300000, guid: 7e17fdeada28b2b42bb7ad2a34eb9588, type: 3}
+  - {fileID: 8300000, guid: 3d6b40722b95a1a479efe994474ad545, type: 3}
+  - {fileID: 8300000, guid: 834bbf7450a8c6f4b93c87735aeb6c7e, type: 3}
+  - {fileID: 8300000, guid: c05fc242fbede744496ecb848db1b291, type: 3}
+  - {fileID: 8300000, guid: b5f5df1ebd4247643a1c6b699220bf7d, type: 3}
+  waterStepClips:
+  - {fileID: 8300000, guid: b68121e6985beb940a13375ad37edf33, type: 3}
+  - {fileID: 8300000, guid: fd1bb8d0c2dc60344ab0204e1e2553ae, type: 3}
+  - {fileID: 8300000, guid: 6e5490dd028492f4f85f94b2a663e996, type: 3}
+  - {fileID: 8300000, guid: 17879b63919d1d248b2e868f648e80d8, type: 3}
+  - {fileID: 8300000, guid: 825a740c71a5d1846ae2b71f5ca8925e, type: 3}
+  - {fileID: 8300000, guid: b86d9e1929ccb8a45a9e0cb72b6ea2a9, type: 3}
+  dirtStepClips:
+  - {fileID: 8300000, guid: 37031eccc4f3d954c88b7602e36c2a6b, type: 3}
+  - {fileID: 8300000, guid: 2a7b1a6a817628549965b02f1da3cad8, type: 3}
+  - {fileID: 8300000, guid: a3234281746499246b2fa2eedecfce10, type: 3}
+  - {fileID: 8300000, guid: 8caaf46c3c64d69409a924519628a019, type: 3}
+  - {fileID: 8300000, guid: 9c9427a15b0cd464a80f33afb0190ebd, type: 3}
+  - {fileID: 8300000, guid: cb1cc995142e6f747b4ee05b4cc87102, type: 3}
+  mushroomStepClips:
+  - {fileID: 8300000, guid: e60baac3ba395824a9c0851860470854, type: 3}
+  - {fileID: 8300000, guid: bc0d099fe25997846a4fe550362ab323, type: 3}
+  - {fileID: 8300000, guid: b8d6b946100ec4d4a862f67ff0d1aca7, type: 3}
+  - {fileID: 8300000, guid: 04688f0ffa3f8424e829cce92582f173, type: 3}
+  - {fileID: 8300000, guid: 262ddcee4b79c084ebd04278e1db7c4c, type: 3}
+  - {fileID: 8300000, guid: e377c745c6859ee41850ec4d518aedfa, type: 3}
   sfxVolume: 1
-  footstepBoost: 1.15
+  footstepBoost: 3
+  jumpBoost: 0.35
+  landBoost: 0.9

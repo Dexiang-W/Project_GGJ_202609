@@ -115,7 +115,7 @@ Material:
     - _GrassDown: 0.28
     - _ISATTACKING: 1
     - _ISFACE: 0
-    - _InteractionRadius: 1.54
+    - _InteractionRadius: 1.44
     - _MAIN_LIGHT_SHADOWS: 0
     - _MAIN_LIGHT_SHADOWS_CASCADE: 0
     - _MainScale: 1

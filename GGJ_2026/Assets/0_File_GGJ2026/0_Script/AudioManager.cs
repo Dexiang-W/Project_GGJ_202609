@@ -2,41 +2,87 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 正式关卡（Level1）的统一音效管理：
-///  · 背景音乐：MUS_Gameplay_Main 全程循环，音量收敛做垫底（明显小于 SFX）；
-///  · 场景环境音：Level1 用 AMB_Lab_Main 循环，音量适中（能明显听到氛围声）；
-///  · 一次性音效（拾取能量 / Q 消耗 / 交互注入 / 脚步、跳跃、落地）走独立通道，响度最大，明显盖过其它声音；
-///  · 脚步声带额外增益（footstepBoost），比其它 SFX 再响一点；
+/// 正式关卡（Level1~Level5）的统一音频管理：
+///  · 每个正式关卡可以在“关卡配乐表”（sceneAudioProfiles，每关一行）里配自己的
+///    主背景音乐 + 环境音（以及各自音量）。切场景时按场景名自动查表并淡入淡出切换；
+///  · 表里没写到的场景会回退到默认字段 musicClip / ambienceClip(+ambienceSceneName)；
+///  · 一次性音效（拾取能量 / Q 消耗 / 交互注入 / 弹跳蘑菇 / 脚步、跳跃、落地）走独立通道，响度最大；
 ///  · 带变体的素材（脚步/跳跃/落地）每次随机抽一个，且避免连续抽到同一条。
 ///
 /// 使用方式：
-///  · 素材由编辑器菜单 GGJ2026/音频/… 自动接到 Resources/GGJ_AudioManager 预制体上
-///    （见 GGJAudioSetupBuilder.cs，编译后会自动补建一次，也可手动重建），不用人工拖拽；
+///  · 素材与关卡配乐表由编辑器菜单 GGJ2026/音频/… 自动接到 Resources/GGJ_AudioManager 预制体
+///    （见 GGJAudioSetupBuilder.cs），不用人工拖拽；
+///  · 想微调：Project 里打开该预制体 —— 每个关卡的音乐/环境音/音量、淡入淡出时长都在上面改；
 ///  · 各玩法脚本通过 AudioManager.EnsureCreated() + Instance.PlayXxx() 触发音效。
 ///
-/// 实例为 DontDestroyOnLoad：进入正式玩法（GameplayHUD 创建）后音乐全程不断；
-/// 环境音只在该场景名 == ambienceSceneName（默认 Level1）时播放，离开 Level1 自动停。
+/// 实例为 DontDestroyOnLoad：进入正式玩法（GameplayHUD 创建）后音乐全程不断，
+/// 关卡切换（加载新场景）时按新场景的配置行自动淡出旧 BGM/环境音、淡入新的。
 /// </summary>
 [DisallowMultipleComponent]
 public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance { get; private set; }
 
-    [Header("背景音乐（全程循环）")]
+    /// <summary>脚踩的地表类型，决定脚步声用哪组素材（默认 Floor = 上面的 footstepClips）。</summary>
+    public enum StepSurface
+    {
+        Floor,      // 地板/实验室（footstepClips = SFX_Footstep_Lab_x）
+        Grass,      // 草地
+        Sand,       // 沙地
+        Water,      // 水体 / 浅水洼（素材组为 Puddle）
+        Dirt,       // 泥土
+        Mushroom    // 蘑菇地形
+    }
+
+    // 单关可配置单位：一个正式关卡一行（主音乐 + 环境音）
+    [System.Serializable]
+    public class SceneAudioProfile
+    {
+        [Tooltip("场景名，必须与场景文件同名（如 Level2）。新增关卡时加一行即可")]
+        public string sceneName;
+
+        [Header("主背景音乐（循环）")]
+        [Tooltip("该关卡的主 BGM；留空 = 本关无主音乐")]
+        public AudioClip musicClip;
+        [Range(0f, 1f)]
+        [Tooltip("该关 BGM 音量：收敛做垫底，明显小于 SFX（默认 0.3 左右）")]
+        public float musicVolume = 0.3f;
+
+        [Header("场景环境音（循环，叠在 BGM 上面）")]
+        [Tooltip("该关卡的环境音（如 AMB_Lab_Main）；留空 = 本关无环境音")]
+        public AudioClip ambienceClip;
+        [Range(0f, 1f)]
+        [Tooltip("该关环境音音量：要能明显听到氛围声（默认 0.2 左右）")]
+        public float ambienceVolume = 0.2f;
+    }
+
+    [Header("默认主音乐（关卡配乐表里没写到的场景用）")]
     [Tooltip("MUS_Gameplay_Main")]
     public AudioClip musicClip;
     [Range(0f, 1f)]
     [Tooltip("背景音量：收敛做垫底，明显小于 SFX（默认 0.3 左右）")]
     public float musicVolume = 0.3f;
 
-    [Header("场景环境音（Level1，循环）")]
+    [Header("默认环境音（关卡配乐表里没写到的场景用）")]
     [Tooltip("AMB_Lab_Main")]
     public AudioClip ambienceClip;
     [Range(0f, 1f)]
     [Tooltip("环境音音量：要能明显听到氛围声（默认 0.2 左右）")]
     public float ambienceVolume = 0.2f;
-    [Tooltip("只在“此场景名”里播放环境音（离开自动停）")]
+    [Tooltip("只在“此场景名”里播放默认环境音（离开自动停）")]
     public string ambienceSceneName = "Level1";
+
+    [Header("关卡配乐表（推荐在这统一按关卡配置）")]
+    [Tooltip("每个正式关卡一行：主 BGM + 环境音 + 各自音量。\n" +
+             "进入/切换场景时自动按场景名匹配这一行，做淡入淡出切换；\n" +
+             "表里没匹配到的场景用上面的“默认”字段。")]
+    public SceneAudioProfile[] sceneAudioProfiles;
+
+    [Header("关卡切换淡入淡出（秒）")]
+    [Tooltip("换关卡时主 BGM 淡出 + 淡入的总时长")]
+    public float musicFadeSeconds = 1.5f;
+    [Tooltip("换关卡时环境音淡出 + 淡入的总时长")]
+    public float ambienceFadeSeconds = 1f;
 
     [Header("一次性玩法音效")]
     [Tooltip("触碰 energyPoint：SFX_Energy_Pickup")]
@@ -45,22 +91,42 @@ public class AudioManager : MonoBehaviour
     public AudioClip returnClip;
     [Tooltip("交互（按 E）：SFX_Energy_Inject")]
     public AudioClip injectClip;
+    [Tooltip("弹跳蘑菇（BouncePad 踩上去弹起）：SFX_Mushroom_Bounce")]
+    public AudioClip bounceClip;
 
     [Header("带变体的素材（播放时随机）")]
-    [Tooltip("SFX_Footstep_Lab_1~6")]
+    [Tooltip("地板/实验室脚步（默认地表，SFX_Footstep_Lab_1~6）。没识别出地表或地表组没配时就播这组")]
     public AudioClip[] footstepClips;
-    [Tooltip("SFX_Player_Jump_1~5")]
+    [Tooltip("SFX_Player_Jump_1~5（跳跃响度由下方 jumpBoost 单独调）")]
     public AudioClip[] jumpClips;
-    [Tooltip("SFX_Player_Land_1~5")]
+    [Tooltip("SFX_Player_Land_1~5（落地响度由下方 landBoost 单独调）")]
     public AudioClip[] landClips;
+
+    [Header("地表脚步组（不同地表自动换一组；某组没配素材会自动回退到地板组）")]
+    [Tooltip("草地：SFX_Footstep_Grass_1~6")]
+    public AudioClip[] grassStepClips;
+    [Tooltip("沙地：SFX_Footstep_Sand_1~6")]
+    public AudioClip[] sandStepClips;
+    [Tooltip("水体/浅水洼：SFX_Footstep_Puddle_1~6")]
+    public AudioClip[] waterStepClips;
+    [Tooltip("泥土：SFX_Footstep_Dirt_1~6")]
+    public AudioClip[] dirtStepClips;
+    [Tooltip("蘑菇地形：SFX_Footstep_Mushroom_1~6")]
+    public AudioClip[] mushroomStepClips;
 
     [Header("响度")]
     [Range(0f, 1f)]
-    [Tooltip("一次性音效统一音量（尽量保持 1，保证明显盖过音乐/环境音）")]
+    [Tooltip("一次性音效统一基础音量（尽量保持 1；脚步/跳跃/落地再乘下面各自的系数）")]
     public float sfxVolume = 1f;
-    [Range(0.5f, 2f)]
-    [Tooltip("脚步声相对其它 SFX 的额外增益（1 = 与其它音效同响；调大则脚步声更明显）")]
-    public float footstepBoost = 1.15f;
+    [Range(0.1f, 3f)]
+    [Tooltip("脚步声最终音量系数（在 sfxVolume 基础上乘）：1 = 与其它 SFX 同响。觉得脚步不够响就往上调")]
+    public float footstepBoost = 2f;
+    [Range(0.05f, 2f)]
+    [Tooltip("跳跃音效音量系数（在 sfxVolume 基础上乘）。觉得跳跃太吵就往低调")]
+    public float jumpBoost = 0.6f;
+    [Range(0.05f, 2f)]
+    [Tooltip("落地音效音量系数（在 sfxVolume 基础上乘）")]
+    public float landBoost = 0.9f;
 
     // 三个独立音源：音乐 / 环境音 / 一次性音效
     private AudioSource musicSource;
@@ -68,6 +134,8 @@ public class AudioManager : MonoBehaviour
     private AudioSource sfxSource;
 
     private bool levelAudioStarted;
+    private Coroutine musicFadeRoutine;
+    private Coroutine ambienceFadeRoutine;
     private int lastFootstepIndex = -1;
     private int lastJumpIndex = -1;
     private int lastLandIndex = -1;
@@ -92,7 +160,7 @@ public class AudioManager : MonoBehaviour
             {
                 warnedPrefabMissing = true;
                 Debug.LogWarning("[AudioManager] 未找到 Resources/GGJ_AudioManager 预制体，音效素材尚未接入。\n" +
-                                 "请执行菜单 GGJ2026/音频/重建音频管理预制体（自动接入 4_Temp_Xiaoteng_Audio 素材）后重试。");
+                                 "请执行菜单 GGJ2026/音频/重建音频管理预制体（自动接入 7_Audio 素材）后重试。");
             }
 
             GameObject go = new GameObject("GGJ_AudioManager");
@@ -135,13 +203,11 @@ public class AudioManager : MonoBehaviour
         if (!levelAudioStarted)
             return;
 
-        if (scene.name == ambienceSceneName)
-            StartAmbience();
-        else
-            StopAmbience();
+        // 切到新场景 → 按关卡配乐表自动换 BGM / 环境音（带淡入淡出）
+        ApplySceneProfile(scene.name);
     }
 
-    /// <summary>正式游玩开始时调用（进入 Level1 / GameplayHUD 创建时）：启动 BGM 并刷新环境音。</summary>
+    /// <summary>正式游玩开始时调用（进入正式关卡 / GameplayHUD 创建时）：按当前场景应用配乐。</summary>
     public void BeginLevelAudio()
     {
         CreateAudioSources();
@@ -150,19 +216,119 @@ public class AudioManager : MonoBehaviour
         {
             levelAudioStarted = true;
 
-            if (musicClip != null)
-            {
-                musicSource.clip = musicClip;
-                musicSource.loop = true;
-                musicSource.volume = musicVolume;
-                musicSource.Play();
-            }
-
             // 停掉旧流程（GameFlowController）还挂在标题阶段的音乐源，避免 BGM 双份叠加
             StopLegacyTitleMusic();
         }
 
-        RefreshAmbience();
+        // 若从标题进入，此刻活动场景还是 Begin_Menu，会走默认字段；
+        // 真正加载 LevelX 后会再触发 OnSceneLoaded 命中配乐表那一行。
+        ApplySceneProfile(SceneManager.GetActiveScene().name);
+    }
+
+    // ---------------------------------------------------------------- 关卡配乐表
+
+    /// <summary>按场景名应用配乐：优先查表，查不到回退默认字段。</summary>
+    private void ApplySceneProfile(string sceneName)
+    {
+        SceneAudioProfile profile = FindProfile(sceneName);
+
+        if (profile != null)
+        {
+            SetMusic(profile.musicClip, profile.musicVolume);
+            SetAmbience(profile.ambienceClip, profile.ambienceVolume);
+        }
+        else
+        {
+            SetMusic(musicClip, musicVolume);
+            bool allowDefaultAmbience = sceneName == ambienceSceneName;
+            SetAmbience(allowDefaultAmbience ? ambienceClip : null, ambienceVolume);
+        }
+    }
+
+    private SceneAudioProfile FindProfile(string sceneName)
+    {
+        if (sceneAudioProfiles == null)
+            return null;
+
+        foreach (SceneAudioProfile p in sceneAudioProfiles)
+        {
+            if (p != null && !string.IsNullOrEmpty(p.sceneName) && p.sceneName == sceneName)
+                return p;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 平滑切到某条主音乐：旧音乐先淡出，再淡入新音乐。
+    /// 目标是当前正播的同一条时只校正音量，不打断重播。
+    /// </summary>
+    private void SetMusic(AudioClip clip, float targetVolume)
+    {
+        CreateAudioSources();
+
+        if (musicFadeRoutine != null)
+            StopCoroutine(musicFadeRoutine);
+
+        musicFadeRoutine = StartCoroutine(SwitchSourceRoutine(musicSource, clip, targetVolume, musicFadeSeconds, true, () => musicFadeRoutine = null));
+    }
+
+    /// <summary>平滑切到某条环境音；clip 为 null 表示该关不需要环境音（淡出并停掉）。</summary>
+    private void SetAmbience(AudioClip clip, float targetVolume)
+    {
+        CreateAudioSources();
+
+        if (ambienceFadeRoutine != null)
+            StopCoroutine(ambienceFadeRoutine);
+
+        ambienceFadeRoutine = StartCoroutine(SwitchSourceRoutine(ambienceSource, clip, targetVolume, ambienceFadeSeconds, true, () => ambienceFadeRoutine = null));
+    }
+
+    private System.Collections.IEnumerator SwitchSourceRoutine(
+        AudioSource source, AudioClip clip, float targetVolume, float totalSeconds,
+        bool loop, System.Action onDone)
+    {
+        float half = Mathf.Max(0.001f, totalSeconds * 0.5f);
+
+        // 1) 旧素材淡出（目标换成别条时才需要；同一条则直接续播）
+        if (source.clip != null && source.isPlaying && source.clip != clip)
+        {
+            yield return FadeToVolume(source, 0f, half);
+            source.Stop();
+            source.clip = null;
+        }
+
+        // 2) 换上新素材并淡入
+        if (clip != null)
+        {
+            if (source.clip != clip)
+            {
+                source.clip = clip;
+                source.loop = loop;
+            }
+
+            if (!source.isPlaying)
+            {
+                source.volume = 0f;
+                source.Play();
+            }
+
+            yield return FadeToVolume(source, targetVolume, half);
+        }
+
+        onDone?.Invoke();
+    }
+
+    private System.Collections.IEnumerator FadeToVolume(AudioSource source, float targetVolume, float seconds)
+    {
+        float from = source.volume;
+        float elapsed = 0f;
+        while (elapsed < seconds)
+        {
+            elapsed += Time.deltaTime;
+            source.volume = Mathf.Lerp(from, targetVolume, seconds > 0f ? elapsed / seconds : 1f);
+            yield return null;
+        }
+        source.volume = targetVolume;
     }
 
     // ---------------------------------------------------------------- 一次性音效
@@ -170,9 +336,37 @@ public class AudioManager : MonoBehaviour
     public void PlayPickup()      => PlayOneShot(pickupClip);
     public void PlayEnergyReturn() => PlayOneShot(returnClip);
     public void PlayInject()      => PlayOneShot(injectClip);
-    public void PlayFootstep()    => PlayOneShot(PickRandom(footstepClips, ref lastFootstepIndex), sfxVolume * footstepBoost);
-    public void PlayJump()        => PlayOneShot(PickRandom(jumpClips, ref lastJumpIndex));
-    public void PlayLand()        => PlayOneShot(PickRandom(landClips, ref lastLandIndex));
+    public void PlayBounce()      => PlayOneShot(bounceClip);
+    public void PlayFootstep()    => PlayFootstep(StepSurface.Floor);
+
+    /// <summary>播一步脚步：按当前踩的地表类型选素材组并随机一条，音量 = sfxVolume * footstepBoost。</summary>
+    public void PlayFootstep(StepSurface surface)
+    {
+        AudioClip[] pool = GetStepSurfaceClips(surface);
+        PlayOneShot(PickRandom(pool, ref lastFootstepIndex), sfxVolume * footstepBoost);
+    }
+
+    /// <summary>跳跃音效：音量 = sfxVolume * jumpBoost（独立可调，避免“跳比走路还吵”）。</summary>
+    public void PlayJump() => PlayOneShot(PickRandom(jumpClips, ref lastJumpIndex), sfxVolume * jumpBoost);
+
+    /// <summary>落地音效：音量 = sfxVolume * landBoost。</summary>
+    public void PlayLand() => PlayOneShot(PickRandom(landClips, ref lastLandIndex), sfxVolume * landBoost);
+
+    /// <summary>取该地表对应的脚步素材组；没配素材时回退到默认地板组，避免无声。</summary>
+    private AudioClip[] GetStepSurfaceClips(StepSurface surface)
+    {
+        switch (surface)
+        {
+            case StepSurface.Grass:    return HasAny(grassStepClips) ? grassStepClips : footstepClips;
+            case StepSurface.Sand:     return HasAny(sandStepClips) ? sandStepClips : footstepClips;
+            case StepSurface.Water:    return HasAny(waterStepClips) ? waterStepClips : footstepClips;
+            case StepSurface.Dirt:     return HasAny(dirtStepClips) ? dirtStepClips : footstepClips;
+            case StepSurface.Mushroom: return HasAny(mushroomStepClips) ? mushroomStepClips : footstepClips;
+            default:                   return footstepClips;
+        }
+    }
+
+    private static bool HasAny(AudioClip[] clips) => clips != null && clips.Length > 0;
 
     private void PlayOneShot(AudioClip clip, float volumeScale = -1f)
     {
@@ -200,35 +394,6 @@ public class AudioManager : MonoBehaviour
     }
 
     // ---------------------------------------------------------------- 内部
-
-    private void RefreshAmbience()
-    {
-        if (SceneManager.GetActiveScene().name == ambienceSceneName)
-            StartAmbience();
-        else
-            StopAmbience();
-    }
-
-    private void StartAmbience()
-    {
-        if (ambienceClip == null)
-            return;
-
-        CreateAudioSources();
-        if (ambienceSource.isPlaying)
-            return;
-
-        ambienceSource.clip = ambienceClip;
-        ambienceSource.loop = true;
-        ambienceSource.volume = ambienceVolume;
-        ambienceSource.Play();
-    }
-
-    private void StopAmbience()
-    {
-        if (ambienceSource != null && ambienceSource.isPlaying)
-            ambienceSource.Stop();
-    }
 
     private void CreateAudioSources()
     {

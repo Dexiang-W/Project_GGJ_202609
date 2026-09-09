@@ -204,8 +204,8 @@ Material:
     - _Big_UVscale: 992.35
     - _Big_Uscale: 1
     - _Big_Vscale: 1
-    - _Big_WaterUVscale: 20
-    - _Big_WaveSpeed: 0.1
+    - _Big_WaterUVscale: 5
+    - _Big_WaveSpeed: 2
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOpacity: 0.88
@@ -245,8 +245,8 @@ Material:
     - _InterFoamStrength: 0.0006
     - _Metallic: 0
     - _NoiseScale: 100
-    - _NoiseStrength: 0.5
-    - _NoiseUVscale: 50
+    - _NoiseStrength: -0.5
+    - _NoiseUVscale: 61.55
     - _NormalStrength: 1
     - _OcclusionStrength: 1
     - _Overall_NormalStrength: 1
@@ -258,7 +258,7 @@ Material:
     - _ReceiveShadows: 1
     - _ReflectionNoiseStrength: 0.1
     - _RippleNormalStrength: 0.05
-    - _RippleSize: 0.6
+    - _RippleSize: 0.7
     - _RippleStrength: 0.5
     - _SeaLineWidth: 0
     - _ShallowDepth: 0.78
@@ -269,7 +269,7 @@ Material:
     - _Small_Uscale: 1
     - _Small_Vscale: 1
     - _Small_WaterUVscale: 30
-    - _Small_WaveSpeed: -0.08
+    - _Small_WaveSpeed: -1.5
     - _Smoothness: 0.8
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1

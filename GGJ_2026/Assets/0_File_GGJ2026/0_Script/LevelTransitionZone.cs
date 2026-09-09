@@ -401,6 +401,10 @@ public class LevelSceneRunner : MonoBehaviour
                 continue;
             if (cam.transform.root == player.transform.root)
                 continue;
+            // 渲染到 RenderTexture 的特效相机（如踩水波纹的顶视 RT 相机）不属于“屏幕相机”，
+            // 停用会导致水波纹 RT 停更、水面涟漪失效，因此必须保留。
+            if (cam.targetTexture != null)
+                continue;
 
             cam.gameObject.SetActive(false);
         }

@@ -2800,7 +2800,7 @@
     "m_ObjectId": "00e0c84dc3704df88beccc1aec7bd6a6",
     "m_Title": "Lighting - Half Lambert",
     "m_Position": {
-        "x": 256.0,
+        "x": 255.33349609375,
         "y": 234.0
     }
 }
@@ -6124,7 +6124,7 @@
     "m_Title": "Shadow - OldSchoolCelShading",
     "m_Position": {
         "x": -2806.0,
-        "y": 294.0
+        "y": 293.9999694824219
     }
 }
 
@@ -6321,7 +6321,7 @@
     "m_Title": "Matcap",
     "m_Position": {
         "x": 412.0,
-        "y": 2213.0
+        "y": 2213.333251953125
     }
 }
 
@@ -10544,8 +10544,8 @@
     "m_ObjectId": "82f2c441330b49babf7760b072eafdba",
     "m_Title": "Select UV -  Face Shadow Map",
     "m_Position": {
-        "x": -907.0,
-        "y": -960.0
+        "x": -907.333251953125,
+        "y": -960.0000610351563
     }
 }
 
@@ -11005,8 +11005,8 @@
     "m_ObjectId": "89d1f7136975406ca11a4c4b58fd5256",
     "m_Title": "Sample Face Shadow Map",
     "m_Position": {
-        "x": 1061.0,
-        "y": -957.0
+        "x": 1060.66650390625,
+        "y": -956.6666870117188
     }
 }
 
@@ -12540,8 +12540,8 @@
     "m_ObjectId": "a77023ac5e334dd6a8fcd042cd502502",
     "m_Title": "Outline - Scene Depth ",
     "m_Position": {
-        "x": 417.0,
-        "y": 1188.0
+        "x": 416.666748046875,
+        "y": 1188.666748046875
     }
 }
 
@@ -17026,8 +17026,8 @@
     "m_ObjectId": "eb46bca5d63444369b0f6bec9fc592c4",
     "m_Title": "Outline - Fresnel",
     "m_Position": {
-        "x": -2812.0,
-        "y": 795.0
+        "x": -2812.66650390625,
+        "y": 795.3333740234375
     }
 }
 

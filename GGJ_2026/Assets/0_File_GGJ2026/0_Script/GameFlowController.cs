@@ -696,6 +696,10 @@ public class GameFlowController : MonoBehaviour
             if (camera.transform.root == mainCamera.transform.root)
                 continue;
 
+            // 渲染到 RenderTexture 的特效相机（如踩水波纹顶视 RT 相机）保留，不影响画面相机。
+            if (camera.targetTexture != null)
+                continue;
+
             if (camera.gameObject.scene.IsValid() &&
                 camera.gameObject.scene.name == gameplaySceneName)
             {

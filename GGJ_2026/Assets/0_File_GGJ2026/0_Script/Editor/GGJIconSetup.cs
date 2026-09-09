@@ -36,7 +36,13 @@ public static class GGJIconSetup
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets,
             string[] movedAssets, string[] movedFromAssetPaths)
         {
-            // 素材（含图标本体）导入完成后兜底一次：如果当时图还没就绪，也能补上
+            // 只在图标源文件本身发生变化时才兜底，避免修改 ProjectSettings 导致无限导入循环
+            bool iconChanged = Array.Exists(importedAssets, p => p == IconPath)
+                            || Array.Exists(movedAssets, p => p == IconPath)
+                            || Array.Exists(movedFromAssetPaths, p => p == IconPath);
+            if (!iconChanged)
+                return;
+
             ApplyIfPending();
         }
     }
@@ -47,7 +53,7 @@ public static class GGJIconSetup
             return;
 
         Texture2D[] existing = PlayerSettings.GetIconsForTargetGroup(BuildTargetGroup.Standalone);
-        if (existing != null && Array.Exists(existing, tex => tex != null && tex.width >= 64))
+        if (existing != null && existing.Length > 0 && Array.Exists(existing, tex => tex != null))
             return; // 已经配置过图标，不再自动覆盖
 
         try

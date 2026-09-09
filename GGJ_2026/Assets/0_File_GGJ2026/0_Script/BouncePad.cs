@@ -117,6 +117,11 @@ public class BouncePad : MonoBehaviour
             return;
 
         player.LaunchUp(strength);
+
+        // 弹跳蘑菇音效（统一走 AudioManager，素材已接入 GGJ_AudioManager，无需每块板单独拖）
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayBounce();
+
         lastLaunchTime = Time.time;
     }
 }

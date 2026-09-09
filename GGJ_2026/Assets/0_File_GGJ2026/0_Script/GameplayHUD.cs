@@ -8,7 +8,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 正式游玩期间（Level1）的通用游戏 UI（运行时自动创建，不依赖场景里预先摆 Canvas）：
-///   1. 左上角能量格：三格绿色圆点（空=浅绿，满=亮绿），Q 键消耗一格 / EnergyPickup 触碰增加一格；
+///   1. 左上角能量格：三格绿色圆点（空=浅绿，满=亮绿）。增加能量：EnergyPickup 触碰 / 在已充能能量球旁按 Q 收回；
+///      消耗能量：把能量“给”能量植物时按 E（InteractableObject 能量植物模式处理）；
 ///   2. 全屏黑幕：供“触碰 Volume → 渐黑 → 传送回重生点”这类流程淡入淡出；
 ///   3. 黑幕期间在屏幕中部偏左显示的提示文字（每个区域可单独配置文字）。
 ///
@@ -45,6 +46,11 @@ public class GameplayHUD : MonoBehaviour
 
     private readonly List<Image> energyDots = new List<Image>();
 
+    // 耐力条（Shift 冲刺用，位于左上角能量格下方）
+    private RectTransform staminaFillRect;
+    private Image staminaFillImage;
+    private const float StaminaFillMaxWidth = 176f;
+
     // 三格圆点的颜色：空槽 = 半透明“枯灰绿”（明显暗，像没通电的插座）；
     // 满格 = 高饱和亮绿（发光的能量点）。两者拉开明暗与饱和度，一眼就能区分。
     private static readonly Color EmptyDotColor = new Color(0.33f, 0.42f, 0.36f, 0.75f);
@@ -60,6 +66,9 @@ public class GameplayHUD : MonoBehaviour
         }
     }
 
+    /// <summary>HUD 是否已存在（只判空，不会像 Instance 那样自动创建）。</summary>
+    public static bool Exists => _instance != null;
+
     /// <summary>确保 HUD 存在（Level1 场景一加载，各触发区/拾取物就会调用它）。</summary>
     public static void EnsureCreated()
     {
@@ -74,6 +83,9 @@ public class GameplayHUD : MonoBehaviour
         AudioManager.EnsureCreated();
         if (AudioManager.Instance != null)
             AudioManager.Instance.BeginLevelAudio();
+
+        // 安全点/R 键重置系统随 HUD 一起常驻，任何关卡都可用
+        GGJLevelResetManager.EnsureCreated();
     }
 
     /// <summary>
@@ -128,16 +140,10 @@ public class GameplayHUD : MonoBehaviour
 
     private void Update()
     {
-        // 暂停菜单弹出期间不消耗能量
+        // 暂停菜单弹出期间不刷新
         if (PauseMenuManager.IsPaused) return;
 
-        // Q 键消耗一格能量（无能量时忽略）；成功消耗播放 SFX_Energy_Return
-        if (WasQPressedThisFrame() && CurrentEnergy > 0)
-        {
-            SpendEnergy(1);
-            if (AudioManager.Instance != null)
-                AudioManager.Instance.PlayEnergyReturn();
-        }
+        RefreshStaminaBar();
     }
 
     // ---------------------------------------------------------------- 对外接口
@@ -385,6 +391,31 @@ public class GameplayHUD : MonoBehaviour
             dot.raycastTarget = false;
             energyDots.Add(dot);
         }
+
+        // —— 耐力条（能量格正下方；冲刺用 Shift 消耗，松开自动恢复） ——
+        GameObject staminaGO = CreateUiChild("StaminaBar", gameObject.transform);
+        RectTransform staminaRT = staminaGO.GetComponent<RectTransform>();
+        staminaRT.anchorMin = new Vector2(0f, 1f);
+        staminaRT.anchorMax = new Vector2(0f, 1f);
+        staminaRT.pivot = new Vector2(0f, 1f);
+        staminaRT.anchoredPosition = new Vector2(20f, -74f);
+        staminaRT.sizeDelta = new Vector2(StaminaFillMaxWidth + 4f, 10f);
+
+        Image staminaBG = staminaGO.AddComponent<Image>();
+        staminaBG.color = new Color(0f, 0f, 0f, 0.45f);
+        staminaBG.raycastTarget = false;
+
+        GameObject fillGO = CreateUiChild("Fill", staminaRT);
+        staminaFillRect = fillGO.GetComponent<RectTransform>();
+        staminaFillRect.anchorMin = new Vector2(0f, 0.5f);
+        staminaFillRect.anchorMax = new Vector2(0f, 0.5f);
+        staminaFillRect.pivot = new Vector2(0f, 0.5f);
+        staminaFillRect.anchoredPosition = new Vector2(2f, 0f);
+        staminaFillRect.sizeDelta = new Vector2(StaminaFillMaxWidth, 6f);
+
+        staminaFillImage = fillGO.AddComponent<Image>();
+        staminaFillImage.color = new Color(0.15f, 1f, 0.35f, 1f);
+        staminaFillImage.raycastTarget = false;
     }
 
     private static GameObject CreateUiChild(string name, Transform parent)
@@ -438,6 +469,29 @@ public class GameplayHUD : MonoBehaviour
         }
     }
 
+    /// <summary>每帧同步耐力条：满耐力绿色，越少越偏橙红（配合冲刺耐力系统）。</summary>
+    private void RefreshStaminaBar()
+    {
+        if (staminaFillRect == null || staminaFillImage == null)
+            return;
+
+        ThirdPersonController player = ThirdPersonController.Instance;
+        float ratio = (player != null && player.MaxStamina > 0f)
+            ? Mathf.Clamp01(player.CurrentStamina / player.MaxStamina)
+            : 1f;
+
+        Vector2 size = staminaFillRect.sizeDelta;
+        size.x = StaminaFillMaxWidth * ratio;
+        staminaFillRect.sizeDelta = size;
+
+        // 低耐力时偏红提示（t 越小越红）
+        float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(ratio * 2.2f - 0.9f));
+        staminaFillImage.color = Color.Lerp(
+            new Color(1f, 0.4f, 0.3f, 1f),
+            new Color(0.15f, 1f, 0.35f, 1f),
+            t);
+    }
+
     private IEnumerator FadeBlack(float from, float to, float duration)
     {
         if (blackImage == null)
@@ -472,15 +526,5 @@ public class GameplayHUD : MonoBehaviour
         Color c = blackImage.color;
         c.a = alpha;
         blackImage.color = c;
-    }
-
-    private static bool WasQPressedThisFrame()
-    {
-#if ENABLE_INPUT_SYSTEM
-        var keyboard = UnityEngine.InputSystem.Keyboard.current;
-        return keyboard != null && keyboard.qKey.wasPressedThisFrame;
-#else
-        return Input.GetKeyDown(KeyCode.Q);
-#endif
     }
 }

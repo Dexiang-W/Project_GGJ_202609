@@ -36,6 +36,24 @@ namespace StarterAssets
         [Tooltip("Acceleration and deceleration")]
         public float SpeedChangeRate = 10.0f;
 
+        [Header("Stamina (冲刺耐力)")]
+        [Tooltip("耐力上限")]
+        [SerializeField] private float maxStamina = 100f;
+        [Tooltip("按住 Shift 冲刺（落地跑动）时每秒消耗的耐力")]
+        [SerializeField] private float sprintStaminaDrainPerSecond = 22f;
+        [Tooltip("停止冲刺后，经过多少秒才开始恢复耐力")]
+        [SerializeField] private float staminaRegenDelaySeconds = 0.8f;
+        [Tooltip("耐力恢复速度（每秒）")]
+        [SerializeField] private float staminaRegenPerSecond = 28f;
+        [Tooltip("耐力耗尽后需恢复到多少才允许再次冲刺（防“走一步跑一步”反复抖动）")]
+        [SerializeField] private float staminaRestartThreshold = 35f;
+
+        /// <summary>当前耐力（0 ~ MaxStamina），供 HUD / 其它系统读取。</summary>
+        public float CurrentStamina { get; private set; }
+
+        /// <summary>耐力上限（供 HUD / 其它系统读取）。</summary>
+        public float MaxStamina => maxStamina;
+
         public AudioClip LandingAudioClip;
         public AudioClip[] FootstepAudioClips;
         [Range(0, 1)] public float FootstepAudioVolume = 0.5f;
@@ -94,6 +112,11 @@ namespace StarterAssets
         private float _jumpTimeoutDelta;
         private float _fallTimeoutDelta;
 
+        // stamina（冲刺耐力）
+        private bool staminaExhausted;
+        private bool staminaReleasePending;
+        private float staminaTimeSinceLastDrain = float.MaxValue;
+
         // animation IDs
         private int _animIDSpeed;
         private int _animIDGrounded;
@@ -145,6 +168,8 @@ namespace StarterAssets
 
             if (Instance == null)
                 Instance = this;
+
+            CurrentStamina = maxStamina;
         }
 
         private void OnDestroy()
@@ -217,6 +242,45 @@ namespace StarterAssets
             }
         }
 
+        /// <summary>耐力直接回满（进入正式关卡 / 回到安全点时调用）。</summary>
+        public void RestoreFullStamina()
+        {
+            CurrentStamina = maxStamina;
+            staminaExhausted = false;
+            staminaReleasePending = false;
+            staminaTimeSinceLastDrain = float.MaxValue;
+        }
+
+        /// <summary>
+        /// 回到安全点/出生点：瞬移到指定点并清空速度、自由移动计数等运动残留
+        /// （GGJLevelResetManager 按 R 重置时使用；重力按安全点记录状态恢复）。
+        /// </summary>
+        public void PlaceAtSafePoint(Vector3 worldPosition, bool gravityInvertedAfter)
+        {
+            if (InvertGravity != gravityInvertedAfter)
+            {
+                InvertGravity = gravityInvertedAfter;
+                _wasGravityInverted = gravityInvertedAfter;
+                ApplyInversionVisuals();
+            }
+
+            if (_controller != null)
+                _controller.enabled = false;
+
+            transform.position = worldPosition;
+            _verticalVelocity = 0f;
+            _fallTimeoutDelta = FallTimeout;
+            _jumpTimeoutDelta = 0f; // 允许回到安全点后立即起跳
+            freeMoveDepth = 0;
+            _speed = 0f;
+            _animationBlend = 0f;
+
+            if (_controller != null)
+                _controller.enabled = true;
+
+            RestoreFullStamina();
+        }
+
         private void AssignAnimationIDs()
         {
             _animIDSpeed = Animator.StringToHash("Speed");
@@ -268,7 +332,14 @@ namespace StarterAssets
                 ? rawInput
                 : new Vector2(rawInput.x, 0f);
 
-            float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
+            // 冲刺受耐力约束：耐力不足 / 耗尽后恢复中会被降回普通跑速
+            // （标题 Attract / 出生演出等“非正式游玩”阶段不限耐力，保持原有表现）
+            bool staminaContext = IsStaminaContextActive();
+            bool sprintHeld = _input.sprint;
+            if (staminaContext)
+                sprintHeld = sprintHeld && CanSprintWithStamina();
+
+            float targetSpeed = sprintHeld ? SprintSpeed : MoveSpeed;
             if (horizontalInput == Vector2.zero) targetSpeed = 0.0f;
 
             float currentHorizontalSpeed = new Vector3(_controller.velocity.x, 0.0f, _controller.velocity.z).magnitude;
@@ -325,6 +396,81 @@ namespace StarterAssets
                 _animator.SetFloat(_animIDSpeed, _animationBlend);
                 _animator.SetFloat(_animIDMotionSpeed, inputMagnitude);
             }
+
+            // 更新冲刺耐力（在地面跑动时消耗，松开冲刺 / 停跑 / 滞空后延迟恢复）
+            UpdateStamina(staminaContext, sprintHeld, horizontalInput != Vector2.zero, Grounded);
+        }
+
+        // ---------------------------------------------------------------- 冲刺耐力
+
+        /// <summary>耐力系统是否在正式游玩中生效（标题 Attract / 过场等不消耗）。</summary>
+        private bool IsStaminaContextActive()
+        {
+            // HUD 只在正式游玩创建；过场 / 结局演出会禁用 PlayerInput，同样不消耗耐力
+            if (!GameplayHUD.Exists)
+                return false;
+
+#if ENABLE_INPUT_SYSTEM
+            if (_playerInput != null && !_playerInput.enabled)
+                return false;
+#endif
+            return true;
+        }
+
+        private bool CanSprintWithStamina()
+        {
+            // 耐力耗尽后必须先松开冲刺键，再等耐力恢复到阈值之上才能重新冲刺
+            if (staminaReleasePending)
+                return false;
+
+            if (CurrentStamina <= 0f)
+                return false;
+
+            if (staminaExhausted && CurrentStamina < staminaRestartThreshold)
+                return false;
+
+            return true;
+        }
+
+        private void UpdateStamina(bool contextActive, bool sprinting, bool moving, bool grounded)
+        {
+            if (!contextActive)
+            {
+                // 非正式游玩不消耗，随时回满（避免从标题/过场进入正式关卡时耐力不是满的）
+                CurrentStamina = maxStamina;
+                staminaExhausted = false;
+                staminaReleasePending = false;
+                staminaTimeSinceLastDrain = float.MaxValue;
+                return;
+            }
+
+            // 玩家松开了冲刺键：解除“必须松开才能再冲刺”的限制
+            if (!_input.sprint)
+                staminaReleasePending = false;
+
+            float delta = Time.deltaTime;
+            staminaTimeSinceLastDrain += delta;
+
+            if (sprinting && moving && grounded && CurrentStamina > 0f)
+            {
+                // 落地跑动冲刺中：消耗耐力
+                staminaTimeSinceLastDrain = 0f;
+                CurrentStamina = Mathf.Max(0f, CurrentStamina - sprintStaminaDrainPerSecond * delta);
+                if (CurrentStamina <= 0.001f)
+                {
+                    CurrentStamina = 0f;
+                    staminaExhausted = true;
+                    staminaReleasePending = true;
+                }
+            }
+            else if (CurrentStamina < maxStamina &&
+                     staminaTimeSinceLastDrain >= staminaRegenDelaySeconds)
+            {
+                // 本轮没在冲刺消耗、且过了恢复延迟：恢复耐力（站着不动按住 Shift 也会慢慢回）
+                CurrentStamina = Mathf.Min(maxStamina, CurrentStamina + staminaRegenPerSecond * delta);
+                if (CurrentStamina >= staminaRestartThreshold)
+                    staminaExhausted = false;
+            }
         }
 
         private void JumpAndGravity()
@@ -357,6 +503,12 @@ namespace StarterAssets
                     // 起跳音效（SFX_Player_Jump_x 随机）
                     if (AudioManager.Instance != null)
                         AudioManager.Instance.PlayJump();
+
+                    // 消耗本次跳跃输入并立即加跳锁：
+                    // CharacterController 实际离开地面前的 1~2 帧仍会误判 Grounded，
+                    // 不处理会出现“同一次起跳被判两次”→ 跳跃音效连响两下。
+                    _jumpTimeoutDelta = JumpTimeout;
+                    _input.jump = false;
                 }
 
                 if (_jumpTimeoutDelta >= 0.0f)
@@ -444,7 +596,8 @@ namespace StarterAssets
         {
             if (animationEvent.animatorClipInfo.weight > 0.5f)
             {
-                // 优先用 Inspector 里手动指定的脚步素材；没指定时自动走 AudioManager 的 Lab 脚步随机池
+                // 优先用 Inspector 里手动指定的脚步素材（老通道，整场通用）；
+                // 没指定时走 AudioManager：先检测脚下地表，再播对应地表素材组。
                 if (FootstepAudioClips != null && FootstepAudioClips.Length > 0)
                 {
                     var index = Random.Range(0, FootstepAudioClips.Length);
@@ -452,9 +605,51 @@ namespace StarterAssets
                 }
                 else if (AudioManager.Instance != null)
                 {
-                    AudioManager.Instance.PlayFootstep();
+                    AudioManager.Instance.PlayFootstep(DetectStepSurface());
                 }
             }
+        }
+
+        /// <summary>
+        /// 检测脚底当前踩的地表类型（每走一步调用一次）。
+        /// 先找 GGJStepSurfaceMarker 组件（挂在碰撞体或它父物体上）；
+        /// 没有就按地面物体名 / 物理材质名里的关键字兜底识别；都识别不出返回 Floor。
+        /// </summary>
+        private AudioManager.StepSurface DetectStepSurface()
+        {
+            Vector3 upDirection = GetUpDirection();
+            Vector3 origin = transform.position + (upDirection * GroundedOffset);
+
+            if (Physics.SphereCast(origin, GroundedRadius, -upDirection, out RaycastHit hit,
+                    0.5f, GroundLayers, QueryTriggerInteraction.Ignore))
+            {
+                // 1) 碰撞体 / 父物体上的显式标记优先
+                GGJStepSurfaceMarker marker = hit.collider.GetComponentInParent<GGJStepSurfaceMarker>();
+                if (marker != null)
+                    return marker.surface;
+
+                // 2) 按物体名 / 物理材质名兜底识别
+                string hint = hit.collider.gameObject.name;
+                if (hit.collider.sharedMaterial != null)
+                    hint += " " + hit.collider.sharedMaterial.name;
+                return ClassifySurfaceName(hint);
+            }
+
+            return AudioManager.StepSurface.Floor;
+        }
+
+        private static AudioManager.StepSurface ClassifySurfaceName(string nameHint)
+        {
+            if (string.IsNullOrEmpty(nameHint))
+                return AudioManager.StepSurface.Floor;
+
+            string key = nameHint.ToLowerInvariant();
+            if (key.Contains("grass"))  return AudioManager.StepSurface.Grass;
+            if (key.Contains("sand"))   return AudioManager.StepSurface.Sand;
+            if (key.Contains("water") || key.Contains("puddle")) return AudioManager.StepSurface.Water;
+            if (key.Contains("dirt") || key.Contains("mud") || key.Contains("soil")) return AudioManager.StepSurface.Dirt;
+            if (key.Contains("mushroom")) return AudioManager.StepSurface.Mushroom;
+            return AudioManager.StepSurface.Floor;
         }
 
         private void OnLand(AnimationEvent animationEvent)

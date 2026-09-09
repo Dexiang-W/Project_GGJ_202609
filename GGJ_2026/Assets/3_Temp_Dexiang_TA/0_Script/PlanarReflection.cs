@@ -20,8 +20,18 @@ public class PlanarReflection : MonoBehaviour
     [Tooltip("写入 Shader 的反射强度 Float 属性名。\n需在 ShaderGraph 中新增同名 Float，并用 Multiply 节点乘在“反射采样结果”之后。\n留空 = 不写强度（会退化成硬切换）")]
     public string fadePropertyName = "_PlanarReflectionFade";
 
+    [Header("性能优化（运行时生效，主要解决卡顿）")]
+    [Tooltip("反射相机每 N 帧才真正刷新一次（1=每帧；2=隔帧，开销约减半）。\n反射的是静止/缓动场景，隔帧刷新视觉几乎无感")]
+    [Range(1, 6)]
+    public int renderInterval = 2;
+    [Tooltip("关闭反射相机自身的实时阴影。默认反射相机会把整个场景的阴影再渲一遍（最贵的一步），关掉能省大量开销")]
+    public bool enableReflectionShadows = false;
+    [Tooltip("超出 reflectionDistance 后直接释放反射 RT（省显存/带宽），回到范围内再重建")]
+    public bool releaseTextureWhenTooFar = true;
+
     private Camera reflectionCamera;
     private RenderTexture reflectionRT;
+    private UniversalAdditionalCameraData reflectionURPData;
     private MaterialPropertyBlock mpb;             // 每块水面独立的属性块，避免多水面互相覆盖
     private static readonly int PlanarReflectionTextureID = Shader.PropertyToID("_PlanarReflectionTexture");
 
@@ -49,6 +59,7 @@ public class PlanarReflection : MonoBehaviour
             var data = reflectionCamera.gameObject.AddComponent<UniversalAdditionalCameraData>();
             data.requiresColorOption = CameraOverrideOption.Off;
             data.requiresDepthOption = CameraOverrideOption.Off;
+            reflectionURPData = data;
         }
     }
 
@@ -70,6 +81,16 @@ public class PlanarReflection : MonoBehaviour
             if (dist >= reflectionDistance)
             {
                 SetReflectionFade(r, 0f); // 让强度收敛到 0，水面不再有任何反射贡献
+
+                // 彻底走远时把反射 RT 释放掉：省显存/带宽，回到范围内再重建
+                if (releaseTextureWhenTooFar && reflectionRT != null)
+                {
+                    reflectionRT.Release();
+                    reflectionRT = null;
+                }
+                if (releaseTextureWhenTooFar && reflectionCamera != null)
+                    reflectionCamera.targetTexture = null;
+
                 return;
             }
 
@@ -82,6 +103,11 @@ public class PlanarReflection : MonoBehaviour
 
         // 视锥剔除：水面不在相机画面里时同样没必要渲染反射
         if (r != null && !IsVisibleToCamera(r, camera))
+            return;
+
+        // 隔帧刷新：非渲染帧沿用上一帧反射图，省一半反射相机开销
+        if (Application.isPlaying && renderInterval > 1 &&
+            (Time.frameCount % renderInterval) != 0)
             return;
 
         RenderReflection(context, camera, fade);
@@ -109,6 +135,17 @@ public class PlanarReflection : MonoBehaviour
 
         // 1. 更新反射相机参数
         reflectionCamera.CopyFrom(realCamera);
+
+        // 反射图不渲实时阴影（省掉整场景的第二次阴影 Pass，是反射里最贵的一步）
+        if (reflectionURPData != null)
+        {
+            reflectionURPData.renderShadows = enableReflectionShadows;
+            reflectionURPData.requiresColorOption = CameraOverrideOption.Off;
+            reflectionURPData.requiresDepthOption = CameraOverrideOption.Off;
+        }
+        reflectionCamera.allowMSAA = false;   // 反射图按比例缩过，不需要 MSAA
+        reflectionCamera.allowHDR = false;    // LDR 反射图省显存/带宽，肉眼几乎无差
+
         // 多水面共处时：自动去掉"自己所在层"，避免把其它水面也当反射物渲染进反射图
         reflectionCamera.cullingMask = reflectLayers & ~(1 << gameObject.layer);
         reflectionCamera.useOcclusionCulling = false;
