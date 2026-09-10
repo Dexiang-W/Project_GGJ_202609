@@ -56,6 +56,8 @@ public class InteractableObject : MonoBehaviour
     [SerializeField] private bool energyPlantMode = false;
     [Tooltip("按一次 E 消耗的能量格数（默认 1，Q 回收时原样还回）")]
     [SerializeField] private int chargeEnergyCost = 1;
+    [Tooltip("多档能量模式（蘑菇等）：E 逐档 +1、Q 逐档 -1；由 BouncePad 在运行时自动开启，一般无需手动勾选")]
+    [SerializeField] private bool multiLevelCharge = false;
     [Tooltip("充能后要隐藏的物体（通常是“能量球”本身的视觉物体/发光球），空数组表示不隐藏")]
     [SerializeField] private GameObject[] hiddenWhenCharged = null;
     [Tooltip("被本能量球催长的植物 Animator（Q 回收时把它们的动画退回初始/未长成形态），可多个")]
@@ -84,6 +86,9 @@ public class InteractableObject : MonoBehaviour
     private bool highlightOn;
     private Coroutine hintRoutine;
 
+    // 多档能量模式（蘑菇等）：由 BouncePad 等在运行时通过 SetupMultiLevelEnergy 注册
+    private IEnergyChargeable energyTarget;
+
     private void OnEnable()
     {
         ActiveObjects.Add(this);
@@ -104,6 +109,13 @@ public class InteractableObject : MonoBehaviour
 
     private void Update()
     {
+        // 多档能量（蘑菇等）：每一档都能 E 充能 / Q 回收，各自独立
+        if (multiLevelCharge && energyTarget != null)
+        {
+            UpdateMultiLevelCharge();
+            return;
+        }
+
         // 已用掉/已充能
         if (consumed)
         {
@@ -142,6 +154,13 @@ public class InteractableObject : MonoBehaviour
     /// <summary>执行一次交互（其他脚本也可主动调用，例如机关联动）。</summary>
     public void Interact()
     {
+        // 多档能量：E = 给目标 +1 档
+        if (multiLevelCharge && energyTarget != null)
+        {
+            ChargeOneLevel();
+            return;
+        }
+
         if (consumed)
             return;
 
@@ -201,9 +220,8 @@ public class InteractableObject : MonoBehaviour
         if (hud == null)
             return;
 
-        // 能量已满 → 收不进去，植物保持已充能形态
-        if (hud.CurrentEnergy >= GameplayHUD.MaxEnergy)
-            return;
+        // 说明：玩家能量已满（3 格）时同样允许回收，多出部分不再累加（上限恒为 3），
+        // 避免“能量满了就退不回植物”把必须退回植物的关卡卡死。
 
         // 状态回到“未充能”：能量球重现
         consumed = false;
@@ -219,8 +237,110 @@ public class InteractableObject : MonoBehaviour
             AudioManager.Instance.PlayEnergyReturn();
     }
 
-    /// <summary>能量植物模式：是否处于“已充能、可被 Q 回收”状态。</summary>
-    public bool IsReclaimable => energyPlantMode && consumed;
+    // ---------------------------------------------------------------- 多档能量（蘑菇等）
+
+    /// <summary>
+    /// 注册一个“多档能量目标”（例如 BouncePad 蘑菇）：
+    /// 之后本物体上的 E = 目标 +1 档（消耗 1 格能量），Q = 目标 -1 档（返还 1 格能量）。
+    /// 目标实例各自保存自己的档位，互不影响。
+    /// </summary>
+    public void SetupMultiLevelEnergy(IEnergyChargeable target)
+    {
+        energyTarget = target;
+        multiLevelCharge = target != null;
+        if (multiLevelCharge)
+            energyPlantMode = true;
+    }
+
+    private void UpdateMultiLevelCharge()
+    {
+        bool inRange = DistanceToPlayer() <= interactDistance;
+        bool isNearest = TryGetNearestAny(out InteractableObject nearest) && nearest == this;
+
+        if (!inRange || !isNearest)
+        {
+            SetHighlight(false);
+            return;
+        }
+
+        // 有能量 → 黄色（提示可 Q 回收）；空档 → 绿色（提示可 E 充能）
+        SetHighlight(true, energyTarget.EnergyLevel > 0);
+
+        if (WasEPressedThisFrame())
+            ChargeOneLevel();
+
+        if (WasQPressedThisFrame())
+            ReclaimOneLevel();
+    }
+
+    /// <summary>E：给目标 +1 档（消耗 1 格玩家能量）；已满档或能量不足则不动。</summary>
+    private void ChargeOneLevel()
+    {
+        if (energyTarget == null || energyTarget.EnergyLevel >= energyTarget.MaxEnergyLevel)
+            return;
+
+        GameplayHUD.EnsureCreated();
+        GameplayHUD hud = GameplayHUD.Instance;
+        if (hud == null)
+            return;
+
+        if (!hud.SpendEnergy(chargeEnergyCost))
+        {
+            ShowInsufficientEnergyHint();
+            return;
+        }
+
+        energyTarget.SetEnergyLevel(energyTarget.EnergyLevel + 1);
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayInject();
+    }
+
+    /// <summary>Q：目标 -1 档（返还 1 格玩家能量）；空档或玩家能量已满则不动。</summary>
+    private void ReclaimOneLevel()
+    {
+        if (energyTarget == null || energyTarget.EnergyLevel <= 0)
+            return;
+
+        GameplayHUD.EnsureCreated();
+        GameplayHUD hud = GameplayHUD.Instance;
+
+        // 无论玩家能量是否已满（上限恒为 3），都允许回收：档位一定 -1，
+        // 多余的能量直接丢弃（AddEnergy 内部会 Clamp 到上限），
+        // 这样“必须把蘑菇从 2 收回到 1 才能通关”的关卡不会被“能量满了”卡住。
+        energyTarget.SetEnergyLevel(energyTarget.EnergyLevel - 1);
+        if (hud != null)
+            hud.AddEnergy(chargeEnergyCost);
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayEnergyReturn();
+    }
+
+    /// <summary>找离玩家最近的任意可交互物体（含“多档能量”目标，用于多档高亮判定）。</summary>
+    private static bool TryGetNearestAny(out InteractableObject nearest)
+    {
+        nearest = null;
+        float best = float.MaxValue;
+
+        foreach (InteractableObject obj in ActiveObjects)
+        {
+            if (obj == null || !obj.enabled)
+                continue;
+
+            float d = obj.DistanceToPlayer();
+            if (d < best)
+            {
+                best = d;
+                nearest = obj;
+            }
+        }
+
+        return nearest != null;
+    }
+
+    /// <summary>能量植物模式：是否处于“已充能、可被 Q 回收”状态。
+    /// 多档能量模式（蘑菇）有自己独立的 Q 处理，不参与这里的“可回收目标”竞争。</summary>
+    public bool IsReclaimable => energyPlantMode && !multiLevelCharge && consumed;
 
     /// <summary>能量植物模式：E 时消耗的能量格数（供 UI/编辑器提示使用）。</summary>
     public int ChargeEnergyCost => chargeEnergyCost;

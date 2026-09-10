@@ -26,7 +26,8 @@ public class FullScreenPassFader : MonoBehaviour
     public enum TriggerMode
     {
         [InspectorName("对象激活时自动播放")] Auto,
-        [InspectorName("玩家走进触发区域播放一次")] Trigger
+        [InspectorName("玩家走进触发区域播放一次")] Trigger,
+        [InspectorName("进入区域下雨，离开区域淡出")] Zone
     }
 
     [Header("目标 Renderer Feature")]
@@ -45,6 +46,13 @@ public class FullScreenPassFader : MonoBehaviour
 
     [Tooltip("Trigger 模式下只响应第一次进入（播放一轮后再次走进不再触发；重新播放会再次生效）")]
     public bool triggerOnlyOnce = true;
+
+    [Header("Zone 模式（进入区域下雨 / 离开区域淡出）")]
+    [Tooltip("Zone 模式：对象启用后立即开始下雨（适合“关卡一开始就下雨”）；取消则等玩家进入触发区域才开始")]
+    public bool zoneRainOnStart = true;
+
+    [Tooltip("Zone 模式：玩家离开触发区域时自动淡出；取消则只能由外部调用 StopRain 淡出")]
+    public bool zoneFadeOutOnExit = true;
 
     [Tooltip("播放结束后是否循环")]
     [SerializeField] private bool repeat = false;
@@ -107,6 +115,8 @@ public class FullScreenPassFader : MonoBehaviour
     private readonly Dictionary<string, float> originalFallbackValues = new Dictionary<string, float>();
     private Coroutine routine;
     private bool hasTriggeredOnce;
+    private bool zoneInside;
+    private bool zoneStopRequested;
     private bool resolved;
     private bool valuesCached;
     private bool prewarmStarted;
@@ -121,23 +131,56 @@ public class FullScreenPassFader : MonoBehaviour
     {
         if (startMode == TriggerMode.Auto)
             Play();
+        else if (startMode == TriggerMode.Zone && zoneRainOnStart)
+            StartRain();
     }
 
     private void OnDisable()
     {
         hasTriggeredOnce = false;
+        zoneInside = false;
+        zoneStopRequested = false;
         Stop();
     }
 
     private void Start()
     {
-        if (startMode == TriggerMode.Trigger && prewarmOnStart)
+        if (startMode != TriggerMode.Auto && prewarmOnStart)
             StartCoroutine(PrewarmOnce());
     }
 
     private void OnTriggerEnter(Collider other)
     {
+        if (other.isTrigger)
+            return;
+
+        if (!string.IsNullOrEmpty(playerTag) && !other.CompareTag(playerTag))
+            return;
+
+        // Zone 模式：进入区域就开始下雨（若已在流程中，则取消“离开淡出”的请求）
+        if (startMode == TriggerMode.Zone)
+        {
+            zoneInside = true;
+            if (routine != null)
+                zoneStopRequested = false;
+            else
+                StartRain();
+            return;
+        }
+
         if (startMode != TriggerMode.Trigger)
+            return;
+
+        if (triggerOnlyOnce && hasTriggeredOnce)
+            return;
+
+        hasTriggeredOnce = true;
+        Play();
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (startMode != TriggerMode.Zone)
             return;
 
         if (other.isTrigger)
@@ -146,11 +189,10 @@ public class FullScreenPassFader : MonoBehaviour
         if (!string.IsNullOrEmpty(playerTag) && !other.CompareTag(playerTag))
             return;
 
-        if (triggerOnlyOnce && hasTriggeredOnce)
-            return;
-
-        hasTriggeredOnce = true;
-        Play();
+        // Zone 模式：离开区域触发淡出
+        zoneInside = false;
+        if (zoneFadeOutOnExit)
+            StopRain();
     }
 
     /// <summary>
@@ -182,6 +224,29 @@ public class FullScreenPassFader : MonoBehaviour
         }
 
         FinishSequence();
+    }
+
+    /// <summary>Zone 模式：开始下雨并一直保持，直到 StopRain 或玩家离开区域。
+    /// 也可由外部脚本（例如自定义触发器）直接调用。</summary>
+    [ContextMenu("开始下雨并保持")]
+    public void StartRain()
+    {
+        if (routine != null)
+        {
+            zoneStopRequested = false;
+            return;
+        }
+
+        zoneStopRequested = false;
+        routine = StartCoroutine(RunZone());
+    }
+
+    /// <summary>Zone 模式：请求淡出。协程会在保持阶段收到请求后按 fadeOutDuration 淡出。</summary>
+    [ContextMenu("停止下雨（淡出）")]
+    public void StopRain()
+    {
+        if (routine != null)
+            zoneStopRequested = true;
     }
 
     /// <summary>立即清理并关闭：停掉播放与音频，关闭 Feature、还原材质引用、销毁运行时克隆。
@@ -261,6 +326,40 @@ public class FullScreenPassFader : MonoBehaviour
             // 此刻画面已全透明（玩家看不见），清理不会造成卡顿。
             CleanupRendererResources();
         }
+    }
+
+    /// <summary>Zone 模式流程：淡入 → 持续保持（直到收到停止请求）→ 淡出 → 清理。</summary>
+    private IEnumerator RunZone()
+    {
+        if (!EnsureFeatureReady())
+        {
+            routine = null;
+            yield break;
+        }
+
+        SetFeatureActive(true);
+        ApplyIntensity(0f);
+
+        if (startDelay > 0f)
+            yield return new WaitForSeconds(startDelay);
+
+        yield return FadeIn(fadeInDuration);
+
+        // 一直下雨，直到玩家离开区域 / 外部调用 StopRain
+        while (!zoneStopRequested)
+            yield return null;
+
+        yield return FadeOut(fadeOutDuration);
+
+        FinishSequence();
+        routine = null;
+
+        if (clearOnFadeOutComplete)
+            CleanupRendererResources();
+
+        // 淡出期间玩家又回到区域内：重新开始下雨
+        if (startMode == TriggerMode.Zone && zoneInside)
+            StartRain();
     }
 
     /// <summary>一轮结束 / 被中断时的收尾：停音频、透明度归 0。刻意不关 Feature、不还原材质。</summary>

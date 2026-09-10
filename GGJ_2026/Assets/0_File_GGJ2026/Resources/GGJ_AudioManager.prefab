@@ -46,7 +46,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   musicClip: {fileID: 0}
   musicVolume: 0.3
-  ambienceClip: {fileID: 8300000, guid: 8e99e6ca2642d5446a2ace74f19a8bed, type: 3}
+  ambienceClip: {fileID: 0}
   ambienceVolume: 0.2
   ambienceSceneName: Level1
   sceneAudioProfiles:
@@ -56,17 +56,17 @@ MonoBehaviour:
     ambienceClip: {fileID: 8300000, guid: d5199509e17576e448dc18257cd91947, type: 3}
     ambienceVolume: 0.5
   - sceneName: Level2
-    musicClip: {fileID: 8300000, guid: 3fbd27c0be360e04f90478775eb646c0, type: 3}
-    musicVolume: 0
-    ambienceClip: {fileID: 8300000, guid: d5199509e17576e448dc18257cd91947, type: 3}
-    ambienceVolume: 0.2
+    musicClip: {fileID: 8300000, guid: 33bf2c478896a0e47b03a8539e72c06f, type: 3}
+    musicVolume: 0.1
+    ambienceClip: {fileID: 8300000, guid: 27ae88ee77979c14394536780e9da11d, type: 3}
+    ambienceVolume: 0.07
   - sceneName: Level3+4
-    musicClip: {fileID: 8300000, guid: 3fbd27c0be360e04f90478775eb646c0, type: 3}
+    musicClip: {fileID: 0}
     musicVolume: 0.3
     ambienceClip: {fileID: 8300000, guid: 27ae88ee77979c14394536780e9da11d, type: 3}
     ambienceVolume: 0.2
   - sceneName: Level5
-    musicClip: {fileID: 8300000, guid: 3fbd27c0be360e04f90478775eb646c0, type: 3}
+    musicClip: {fileID: 0}
     musicVolume: 0.3
     ambienceClip: {fileID: 8300000, guid: 8e99e6ca2642d5446a2ace74f19a8bed, type: 3}
     ambienceVolume: 0.2
