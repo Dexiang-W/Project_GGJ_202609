@@ -58,7 +58,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Alpha: 0.8
+    - _Alpha: 1
     - _BOOLEAN: 0
     - _BOOLEAN_1: 0
     - _Float: 0.33

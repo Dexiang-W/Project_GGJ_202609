@@ -3631,7 +3631,7 @@
     "m_ObjectId": "376d24e84aa74ddcab2ae7014d85227b",
     "m_Version": 0,
     "m_fullscreenMode": 0,
-    "m_BlendMode": 0,
+    "m_BlendMode": 1,
     "m_SrcColorBlendMode": 0,
     "m_DstColorBlendMode": 1,
     "m_ColorBlendOperation": 0,
@@ -9649,7 +9649,7 @@
     "m_ObjectId": "dac5a28e20ab47e4930bde76e1bd675e",
     "m_Title": "RainDrips",
     "m_Position": {
-        "x": -1387.33349609375,
+        "x": -1387.3333740234375,
         "y": 1137.3333740234375
     }
 }
@@ -9751,8 +9751,8 @@
     "m_ObjectId": "e055cff2f27f4c3ca443aa96f6b0d84c",
     "m_Title": "RainRops",
     "m_Position": {
-        "x": -1489.33349609375,
-        "y": 60.00011444091797
+        "x": -1489.3333740234375,
+        "y": 59.999969482421878
     }
 }
 

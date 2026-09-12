@@ -517,7 +517,7 @@ Transform:
   m_GameObject: {fileID: 54305811}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 79.87, y: 6.69, z: -3.17}
+  m_LocalPosition: {x: 89.96, y: 6.69, z: -3.17}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2109,6 +2109,23 @@ MonoBehaviour:
   oneEnergyLaunch: 10
   twoPlusEnergyLaunch: 15
   retriggerCooldown: 0.8
+  squashClip: {fileID: 0}
+  squashTarget: {fileID: 0}
+  levelAnimationSpeeds:
+  - 2
+  - 1.5
+  - 1
+  matchPlayerAirTime: 0
+  returnToFirstFrameOnFinish: 1
+  useAnimatorState: 0
+  animatorStateName: 
+  enableSquashDeform: 1
+  levelSquashDepths:
+  - 0.45
+  - 0.35
+  - 0.25
+  squashDuration: 0.4
+  squashWiden: 1.25
   enablePlayerCharging: 1
   maxEnergyLevel: 2
   startEnergyLevel: 2
@@ -39875,6 +39892,24 @@ MonoBehaviour:
   oneEnergyLaunch: 10
   twoPlusEnergyLaunch: 15
   retriggerCooldown: 0.8
+  squashClip: {fileID: -5729030048419175771, guid: 49b6d090f982d5b4d9aa6d39dbbdc913,
+    type: 3}
+  squashTarget: {fileID: 0}
+  levelAnimationSpeeds:
+  - 2
+  - 1.5
+  - 1
+  matchPlayerAirTime: 1
+  returnToFirstFrameOnFinish: 1
+  useAnimatorState: 0
+  animatorStateName: 
+  enableSquashDeform: 1
+  levelSquashDepths:
+  - 0.45
+  - 0.35
+  - 0.25
+  squashDuration: 0.4
+  squashWiden: 1.25
   enablePlayerCharging: 1
   maxEnergyLevel: 2
   startEnergyLevel: 0
@@ -40691,6 +40726,23 @@ MonoBehaviour:
   oneEnergyLaunch: 10
   twoPlusEnergyLaunch: 15
   retriggerCooldown: 0.8
+  squashClip: {fileID: 0}
+  squashTarget: {fileID: 0}
+  levelAnimationSpeeds:
+  - 2
+  - 1.5
+  - 1
+  matchPlayerAirTime: 0
+  returnToFirstFrameOnFinish: 1
+  useAnimatorState: 0
+  animatorStateName: 
+  enableSquashDeform: 1
+  levelSquashDepths:
+  - 0.45
+  - 0.35
+  - 0.25
+  squashDuration: 0.4
+  squashWiden: 1.25
   enablePlayerCharging: 1
   maxEnergyLevel: 2
   startEnergyLevel: 0
@@ -75240,7 +75292,7 @@ Transform:
   m_GameObject: {fileID: 1010244073}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 47.109375, y: 20, z: -0.29296875}
+  m_LocalPosition: {x: 79.16016, y: 20, z: -0.29296875}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -110411,39 +110463,6 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 1076319021}
   m_PrefabAsset: {fileID: 0}
---- !u!21 &1078081820
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: SandStorm_ParticleMat
-  m_Shader: {fileID: 4800000, guid: 13671c380631170409759d59808921dd, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
-  stringTagMap:
-    RenderType: Transparent
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats: []
-    m_Colors:
-    - _Tint: {r: 1, g: 1, b: 1, a: 1}
-  m_BuildTextureStacks: []
 --- !u!1001 &1079857987
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -111204,6 +111223,39 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 1201279236}
   m_PrefabAsset: {fileID: 0}
+--- !u!21 &1201537922
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SandStorm_ParticleMat
+  m_Shader: {fileID: 4800000, guid: 13671c380631170409759d59808921dd, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats: []
+    m_Colors:
+    - _Tint: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
 --- !u!1 &1216569437
 GameObject:
   m_ObjectHideFlags: 0
@@ -112658,7 +112710,7 @@ MonoBehaviour:
   startDelay: 0
   fadeInDuration: 1
   holdDuration: 5
-  fadeOutDuration: 1
+  fadeOutDuration: 3
   opacityProperty: _Alpha
   fallbackIntensityProperties:
   - _RainDropsNormalStrength
@@ -112677,6 +112729,15 @@ MonoBehaviour:
       weightedMode: 0
       inWeight: 0
       outWeight: 0
+    - serializedVersion: 3
+      time: 0.5080784
+      value: 0.048576917
+      inSlope: -0.16955909
+      outSlope: -0.16955909
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.3805045
     - serializedVersion: 3
       time: 1
       value: 0
@@ -112714,8 +112775,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 56.262074, y: 38.73724, z: 34.702766}
-  m_Center: {x: -31.868963, y: -0.6313801, z: -4.6990623}
+  m_Size: {x: 61.743496, y: 38.73724, z: 34.702766}
+  m_Center: {x: -29.128252, y: -0.6313801, z: -4.6990623}
 --- !u!1001 &1379088833
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -113970,7 +114031,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 1078081820}
+  - {fileID: 1201537922}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -159432,7 +159493,7 @@ PrefabInstance:
     - target: {fileID: 8910237657613463205, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -218.24
+      value: -186.2
       objectReference: {fileID: 0}
     - target: {fileID: 8910237657613463205, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
@@ -160414,6 +160475,23 @@ MonoBehaviour:
   oneEnergyLaunch: 10
   twoPlusEnergyLaunch: 15
   retriggerCooldown: 0.8
+  squashClip: {fileID: 0}
+  squashTarget: {fileID: 0}
+  levelAnimationSpeeds:
+  - 2
+  - 1.5
+  - 1
+  matchPlayerAirTime: 0
+  returnToFirstFrameOnFinish: 1
+  useAnimatorState: 0
+  animatorStateName: 
+  enableSquashDeform: 1
+  levelSquashDepths:
+  - 0.45
+  - 0.35
+  - 0.25
+  squashDuration: 0.4
+  squashWiden: 1.25
   enablePlayerCharging: 1
   maxEnergyLevel: 2
   startEnergyLevel: 0
