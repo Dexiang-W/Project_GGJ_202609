@@ -297,6 +297,11 @@ public class LevelSceneRunner : MonoBehaviour
             camFollow.SnapToCurrentTarget();
         }
 
+        // 解除相机触发区屏蔽：此时画面仍全黑，若出生点位于某个相机触发区内，
+        // 触发区会在下一帧巡检时重新应用并直接就位到该区域的机位（固定视角 / 拉远），
+        // 黑幕淡出时玩家看到的就是正确镜头，不需要等淡出完再切。
+        CameraTriggerVolume.SuppressCameraSwitching = false;
+
         // —— 8. 全黑：可选的提示文字 + 停留 ——
         if (!string.IsNullOrEmpty(messageText))
             hud.ShowMessage(messageText);
@@ -309,8 +314,6 @@ public class LevelSceneRunner : MonoBehaviour
 
         // —— 9. 黑幕淡出 ——
         yield return hud.FadeFromBlackRoutine(fadeFromBlackSeconds);
-
-        CameraTriggerVolume.SuppressCameraSwitching = false;
 
         // —— 10. 收尾 ——
         RestorePlayerInput();

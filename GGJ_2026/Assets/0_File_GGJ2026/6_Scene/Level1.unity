@@ -44155,6 +44155,30 @@ MonoBehaviour:
   oneEnergyLaunch: 7
   twoPlusEnergyLaunch: 12
   retriggerCooldown: 0.8
+  squashClip: {fileID: 0}
+  squashTarget: {fileID: 0}
+  levelAnimationSpeeds:
+  - 2
+  - 1.5
+  - 1
+  matchPlayerAirTime: 0
+  returnToFirstFrameOnFinish: 1
+  useAnimatorState: 0
+  animatorStateName: 
+  enableSquashDeform: 1
+  levelSquashDepths:
+  - 0.45
+  - 0.35
+  - 0.25
+  squashDuration: 0.4
+  squashWiden: 1.25
+  enablePlayerCharging: 1
+  maxEnergyLevel: 2
+  startEnergyLevel: 0
+  scaleTarget: {fileID: 0}
+  level1ScaleMultiplier: 1.35
+  level2ScaleMultiplier: 1.75
+  scaleLerpDuration: 0.25
 --- !u!65 &626677845
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -81388,7 +81412,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: c8797a51432ee334c8001c0cd0d8b2ec, type: 2}
+  sharedProfile: {fileID: 11400000, guid: 5ff94ae1991da924a9d70232039ecba7, type: 2}
 --- !u!4 &802064397
 Transform:
   m_ObjectHideFlags: 0
@@ -82564,6 +82588,7 @@ MonoBehaviour:
         m_CallState: 2
   energyPlantMode: 1
   chargeEnergyCost: 1
+  multiLevelCharge: 0
   hiddenWhenCharged: []
   plantAnimators:
   - {fileID: 317118532}
@@ -87471,6 +87496,7 @@ MonoBehaviour:
       m_Calls: []
   energyPlantMode: 0
   chargeEnergyCost: 1
+  multiLevelCharge: 0
   hiddenWhenCharged: []
   plantAnimators: []
   ungrownStateName: None
@@ -91413,6 +91439,7 @@ MonoBehaviour:
         m_CallState: 2
   energyPlantMode: 1
   chargeEnergyCost: 1
+  multiLevelCharge: 0
   hiddenWhenCharged: []
   plantAnimators:
   - {fileID: 1350463359}
@@ -93520,6 +93547,7 @@ MonoBehaviour:
   restoreOnExit: 1
   unlockWASDWhileInside: 0
   playerTag: Player
+  presenceCheckInterval: 0.15
 --- !u!65 &1610989739
 BoxCollider:
   m_ObjectHideFlags: 0

@@ -45,9 +45,53 @@ public class CameraTriggerVolume : MonoBehaviour
     /// </summary>
     public static bool SuppressCameraSwitching { get; set; }
 
+    [Header("主动检测（重生 / 传送后依然能正确切镜）")]
+    [Tooltip("每隔多少秒主动检测一次“玩家此刻是否真的在区域内”（0 = 关闭，退回纯 Trigger 事件）。\n" +
+             "开启后：玩家被重生 / 传送“放”进区域时（不会有 OnTriggerEnter 事件），相机同样会切到本区域设置。")]
+    [SerializeField] private float presenceCheckInterval = 0.15f;
+
+    private Collider zoneCollider;
+    private ThirdPersonController cachedPlayer;
+    private float presenceTimer;
+
+    /// <summary>玩家当前是否在区域内（主动检测结果，不依赖 Trigger 事件是否送达）。</summary>
+    private bool cameraInside;
+
+    /// <summary>本区域的相机设置是否已经应用（避免每帧重复调用）。</summary>
+    private bool cameraApplied;
+
+    /// <summary>屏蔽期间没能应用的标记：解除屏蔽后补应用，且补应用时“立刻就位”而不是缓缓滑过去。</summary>
+    private bool pendingSnapApply;
+
+    private void Awake()
+    {
+        zoneCollider = GetComponent<Collider>();
+    }
+
     private void OnEnable()
     {
         ResolveCameraController();
+    }
+
+    private void Update()
+    {
+        if (presenceCheckInterval <= 0f)
+            return;
+
+        // 屏蔽刚解除（重生黑幕结束 / 转场完成）→ 当帧立刻补应用，不等下一次巡检
+        if (pendingSnapApply && !SuppressCameraSwitching)
+        {
+            presenceTimer = presenceCheckInterval;
+            RefreshCameraPresence();
+            return;
+        }
+
+        presenceTimer -= Time.deltaTime;
+        if (presenceTimer > 0f)
+            return;
+        presenceTimer = presenceCheckInterval;
+
+        RefreshCameraPresence();
     }
 
     private void OnTriggerEnter(Collider other)
@@ -59,21 +103,123 @@ public class CameraTriggerVolume : MonoBehaviour
         if (unlockWASDWhileInside)
             ResolveTriggeredPlayer(other)?.EnableFreeMovement();
 
-        ResolveCameraController();
-        if (cameraController == null)
+        // 相机：主动检测关闭时维持旧的“进区域立刻切镜”行为；
+        // 开启时统一交给状态检测（这里只是立刻评估一次，保持响应速度不变）。
+        if (presenceCheckInterval <= 0f)
         {
-            if (!warnedMissingCamera)
+            ApplyCameraModeImmediately();
+            return;
+        }
+
+        cameraInside = true;
+        RefreshCameraPresence();
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!other.CompareTag(playerTag))
+            return;
+
+        // 自由移动恢复（离开 -1，无论相机是否要恢复都执行）
+        if (unlockWASDWhileInside)
+            ResolveTriggeredPlayer(other)?.DisableFreeMovement();
+
+        if (presenceCheckInterval <= 0f)
+        {
+            if (restoreOnExit)
+                SetNormalCamera();
+            return;
+        }
+
+        cameraInside = false;
+        RefreshCameraPresence();
+    }
+
+    // ------------------------------------------------------------ 相机：状态驱动
+
+    /// <summary>
+    /// 按“玩家此刻是否真的在区域内”来决定相机，而不是依赖 OnTriggerEnter / OnTriggerExit 事件。
+    /// 关键作用：重生 / 转场是把玩家“放”进区域的 —— 既不会产生 Enter 事件，期间还被
+    /// SuppressCameraSwitching 屏蔽，只靠事件会让相机一直停在普通跟拍；这里每帧巡检即可自动纠正。
+    /// </summary>
+    private void RefreshCameraPresence()
+    {
+        bool inside = IsPlayerInsideVolume();
+
+        if (inside != cameraInside)
+        {
+            cameraInside = inside;
+            cameraApplied = false;
+        }
+
+        if (!inside)
+        {
+            pendingSnapApply = false;
+
+            if (restoreOnExit && cameraApplied)
             {
-                warnedMissingCamera = true;
-                Debug.LogWarning("[CameraTriggerVolume] 找不到主相机（CameraFollowController）。" +
-                                 "请从 Bandeng_Test 场景开始完整游玩流程；若在 Level1 单独测试，需要先在场景里放一个带 CameraFollowController 的相机。", this);
+                cameraApplied = false;
+                SetNormalCamera();
             }
             return;
         }
 
-        // 重生传送期间：落点若在触发区内，不因“被传送进来”而切换相机（自由移动解锁仍生效）
-        if (SuppressCameraSwitching)
+        if (cameraApplied)
             return;
+
+        // 重生 / 转场流程中：先记下，等屏蔽解除后再补应用
+        if (SuppressCameraSwitching)
+        {
+            pendingSnapApply = true;
+            return;
+        }
+
+        bool snap = pendingSnapApply;
+        pendingSnapApply = false;
+        if (ApplyCameraMode(snap))
+            cameraApplied = true;
+    }
+
+    /// <summary>主动检测玩家是否在区域内（用碰撞体包围盒判定）。</summary>
+    private bool IsPlayerInsideVolume()
+    {
+        if (zoneCollider == null || !zoneCollider.enabled)
+            return false;
+
+        Transform player = ResolvePlayerTransform();
+        if (player == null)
+            return false;
+
+        // 取角色躯干位置：CharacterController 的原点在脚底，贴地时可能落在盒子边缘之外一点点
+        Vector3 point = player.position + Vector3.up * 0.5f;
+        return zoneCollider.bounds.Contains(point);
+    }
+
+    /// <summary>运行时解析玩家：优先静态入口，其次全局查找（找到后缓存）。</summary>
+    private Transform ResolvePlayerTransform()
+    {
+        if (cachedPlayer == null)
+        {
+            cachedPlayer = ThirdPersonController.Instance != null
+                ? ThirdPersonController.Instance
+                : FindObjectOfType<ThirdPersonController>();
+        }
+
+        return cachedPlayer != null ? cachedPlayer.transform : null;
+    }
+
+    /// <summary>
+    /// 把本区域的相机设置应用到主相机。
+    /// snap = true 时直接到位（重生 / 转场后的补应用用）：避免画面恢复后镜头还在从上一个机位缓缓滑动。
+    /// </summary>
+    private bool ApplyCameraMode(bool snap)
+    {
+        ResolveCameraController();
+        if (cameraController == null)
+        {
+            WarnMissingCamera();
+            return false;
+        }
 
         switch (modeOnEnter)
         {
@@ -86,31 +232,45 @@ public class CameraTriggerVolume : MonoBehaviour
                 break;
 
             case TriggerMode.LockedPoint:
-                if (fixedPoint != null)
-                    cameraController.SetLockedPoint(fixedPoint, fixedFOV);
-                else
-                    Debug.LogWarning("触发模式为 LockedPoint，但未指定 fixedPoint。");
+                if (fixedPoint == null)
+                {
+                    Debug.LogWarning("触发模式为 LockedPoint，但未指定 fixedPoint。", this);
+                    return false;
+                }
+                cameraController.SetLockedPoint(fixedPoint, fixedFOV);
                 break;
         }
+
+        if (snap)
+            cameraController.SnapToCurrentTarget();
+
+        return true;
     }
 
-    private void OnTriggerExit(Collider other)
+    /// <summary>旧的纯事件路径：进区域且不在屏蔽中时立即切镜。</summary>
+    private void ApplyCameraModeImmediately()
     {
-        if (!other.CompareTag(playerTag))
+        if (SuppressCameraSwitching)
             return;
 
-        // 自由移动恢复（离开 -1，无论相机是否要恢复都执行）
-        if (unlockWASDWhileInside)
-            ResolveTriggeredPlayer(other)?.DisableFreeMovement();
+        ApplyCameraMode(false);
+    }
 
-        if (!restoreOnExit)
-            return;
-
+    private void SetNormalCamera()
+    {
         ResolveCameraController();
         if (cameraController != null)
-        {
             cameraController.SetNormalMode();
-        }
+    }
+
+    private void WarnMissingCamera()
+    {
+        if (warnedMissingCamera)
+            return;
+
+        warnedMissingCamera = true;
+        Debug.LogWarning("[CameraTriggerVolume] 找不到主相机（CameraFollowController）。" +
+                         "请从 Bandeng_Test 场景开始完整游玩流程；若在 Level1 单独测试，需要先在场景里放一个带 CameraFollowController 的相机。", this);
     }
 
     /// <summary>

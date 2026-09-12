@@ -117,14 +117,14 @@ public class RespawnZone : MonoBehaviour
                 cam.SetNormalMode();
                 cam.SnapToCurrentTarget();
             }
+
+            // 解除屏蔽：此刻画面仍全黑，触发区会在当帧巡检时把“落点所在区域”的机位
+            // 重新应用并直接就位 —— 淡出时玩家看到的已经是正确的固定视角，不会有镜头跳动。
+            CameraTriggerVolume.SuppressCameraSwitching = false;
         }
 
-        // 4. 黑幕淡出（淡出期间仍屏蔽相机触发区，避免画面刚恢复时镜头被突然切走）
+        // 4. 黑幕淡出（此时机位已确定：落点在触发区内就是该区域的固定视角，否则为普通跟拍）
         yield return GameplayHUD.Instance.FadeFromBlackRoutine(fadeFromBlackSeconds);
-
-        // 解除屏蔽：玩家此刻若已站在某触发区内，不会因为这次传送被“补触发”，
-        // 之后正常走出再进入该区域时，触发区逻辑照常生效。
-        CameraTriggerVolume.SuppressCameraSwitching = false;
 
         // 文字再停留一小会后隐藏
         if (messageStaySeconds > 0f)

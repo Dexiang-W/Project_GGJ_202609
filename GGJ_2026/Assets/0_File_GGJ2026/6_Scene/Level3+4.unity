@@ -253,7 +253,7 @@ MonoBehaviour:
   gustStrength: 0.5
   gustFrequency: 0.9
   areaSize: {x: 20, y: 6, z: 46}
-  areaRate: 550
+  areaRate: 1500
   rateVariance: 0.3
   anchorToGround: 1
   renderMode: 1
@@ -281,7 +281,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 943404769}
+  - {fileID: 941366782}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -640,7 +640,7 @@ ParticleSystem:
         m_RotationOrder: 4
     startSizeY:
       serializedVersion: 2
-      minMaxState: 0
+      minMaxState: 3
       scalar: 1
       minScalar: 1
       maxCurve:
@@ -693,7 +693,7 @@ ParticleSystem:
         m_RotationOrder: 4
     startSizeZ:
       serializedVersion: 2
-      minMaxState: 0
+      minMaxState: 3
       scalar: 1
       minScalar: 1
       maxCurve:
@@ -1172,7 +1172,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 3
       scalar: 1
-      minScalar: 385
+      minScalar: 1050
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -6206,6 +6206,23 @@ MonoBehaviour:
   oneEnergyLaunch: 10
   twoPlusEnergyLaunch: 15
   retriggerCooldown: 0.8
+  squashClip: {fileID: 0}
+  squashTarget: {fileID: 0}
+  levelAnimationSpeeds:
+  - 2
+  - 1.5
+  - 1
+  matchPlayerAirTime: 0
+  returnToFirstFrameOnFinish: 1
+  useAnimatorState: 0
+  animatorStateName: 
+  enableSquashDeform: 1
+  levelSquashDepths:
+  - 0.45
+  - 0.35
+  - 0.25
+  squashDuration: 0.4
+  squashWiden: 1.25
   enablePlayerCharging: 1
   maxEnergyLevel: 2
   startEnergyLevel: 0
@@ -7036,6 +7053,7 @@ MonoBehaviour:
   restoreOnExit: 1
   unlockWASDWhileInside: 1
   playerTag: Player
+  presenceCheckInterval: 0.15
 --- !u!1001 &315129361
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9178,12 +9196,12 @@ PrefabInstance:
     - target: {fileID: 7911495985406262998, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8910237657613463205, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -32.2
+      value: -35.43
       objectReference: {fileID: 0}
     - target: {fileID: 8910237657613463205, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
@@ -43844,6 +43862,23 @@ MonoBehaviour:
   oneEnergyLaunch: 10
   twoPlusEnergyLaunch: 15
   retriggerCooldown: 0.8
+  squashClip: {fileID: 0}
+  squashTarget: {fileID: 0}
+  levelAnimationSpeeds:
+  - 2
+  - 1.5
+  - 1
+  matchPlayerAirTime: 0
+  returnToFirstFrameOnFinish: 1
+  useAnimatorState: 0
+  animatorStateName: 
+  enableSquashDeform: 1
+  levelSquashDepths:
+  - 0.45
+  - 0.35
+  - 0.25
+  squashDuration: 0.4
+  squashWiden: 1.25
   enablePlayerCharging: 1
   maxEnergyLevel: 2
   startEnergyLevel: 2
@@ -44655,7 +44690,7 @@ PrefabInstance:
     - target: {fileID: 1121834210139245815, guid: 89607423ecf28ec4f864fa43c0a4c595,
         type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8658414315781812722, guid: 89607423ecf28ec4f864fa43c0a4c595,
         type: 3}
@@ -44880,6 +44915,23 @@ MonoBehaviour:
   oneEnergyLaunch: 10
   twoPlusEnergyLaunch: 15
   retriggerCooldown: 0.8
+  squashClip: {fileID: 0}
+  squashTarget: {fileID: 0}
+  levelAnimationSpeeds:
+  - 2
+  - 1.5
+  - 1
+  matchPlayerAirTime: 0
+  returnToFirstFrameOnFinish: 1
+  useAnimatorState: 0
+  animatorStateName: 
+  enableSquashDeform: 1
+  levelSquashDepths:
+  - 0.45
+  - 0.35
+  - 0.25
+  squashDuration: 0.4
+  squashWiden: 1.25
   enablePlayerCharging: 1
   maxEnergyLevel: 2
   startEnergyLevel: 2
@@ -44908,7 +44960,105 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!21 &943404769
+--- !u!1001 &922769187
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.62070155
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.62070155
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.62070155
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 36.771538
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 10.96
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -2.04
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7878875
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.15886809
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.5167494
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.29489726
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -213.719
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -119.966
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 158.821
+      objectReference: {fileID: 0}
+    - target: {fileID: -6796964995308663379, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_Name
+      value: P_Vine_Damage (17)
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 1994348270441840194, guid: 1d045f43a97b6c444bf9722a611087d2,
+        type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 1d045f43a97b6c444bf9722a611087d2, type: 3}
+--- !u!21 &941366782
 Material:
   serializedVersion: 8
   m_ObjectHideFlags: 0
@@ -114281,6 +114431,55 @@ Transform:
   - {fileID: 147820450}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1091092290
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1091092292}
+  - component: {fileID: 1091092291}
+  m_Layer: 0
+  m_Name: Global Volume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1091092291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1091092290}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: c8797a51432ee334c8001c0cd0d8b2ec, type: 2}
+--- !u!4 &1091092292
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1091092290}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 13.049429, y: 3.0231872, z: 1.5599747}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1092544741
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -114520,6 +114719,23 @@ MonoBehaviour:
   oneEnergyLaunch: 10
   twoPlusEnergyLaunch: 15
   retriggerCooldown: 0.8
+  squashClip: {fileID: 0}
+  squashTarget: {fileID: 0}
+  levelAnimationSpeeds:
+  - 2
+  - 1.5
+  - 1
+  matchPlayerAirTime: 0
+  returnToFirstFrameOnFinish: 1
+  useAnimatorState: 0
+  animatorStateName: 
+  enableSquashDeform: 1
+  levelSquashDepths:
+  - 0.45
+  - 0.35
+  - 0.25
+  squashDuration: 0.4
+  squashWiden: 1.25
   enablePlayerCharging: 1
   maxEnergyLevel: 2
   startEnergyLevel: 0
@@ -114738,6 +114954,7 @@ MonoBehaviour:
   restoreOnExit: 1
   unlockWASDWhileInside: 1
   playerTag: Player
+  presenceCheckInterval: 0.15
 --- !u!65 &1170033296
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -116582,6 +116799,39 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!21 &1464510872
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SandStorm_ParticleMat
+  m_Shader: {fileID: 4800000, guid: 13671c380631170409759d59808921dd, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats: []
+    m_Colors:
+    - _Tint: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
 --- !u!1001 &1475472454
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -117596,7 +117846,7 @@ MonoBehaviour:
   gustStrength: 0.5
   gustFrequency: 0.9
   areaSize: {x: 20, y: 6, z: 46}
-  areaRate: 1500
+  areaRate: 3000
   rateVariance: 0.3
   anchorToGround: 1
   renderMode: 1
@@ -117624,7 +117874,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2092220808}
+  - {fileID: 1464510872}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -117983,7 +118233,7 @@ ParticleSystem:
         m_RotationOrder: 4
     startSizeY:
       serializedVersion: 2
-      minMaxState: 0
+      minMaxState: 3
       scalar: 1
       minScalar: 1
       maxCurve:
@@ -118036,7 +118286,7 @@ ParticleSystem:
         m_RotationOrder: 4
     startSizeZ:
       serializedVersion: 2
-      minMaxState: 0
+      minMaxState: 3
       scalar: 1
       minScalar: 1
       maxCurve:
@@ -118515,7 +118765,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 3
       scalar: 1
-      minScalar: 1050
+      minScalar: 2100
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -123232,6 +123482,7 @@ MonoBehaviour:
   restoreOnExit: 1
   unlockWASDWhileInside: 1
   playerTag: Player
+  presenceCheckInterval: 0.15
 --- !u!65 &1663765328
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -123328,8 +123579,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 5.1059885, y: 5.8534627, z: 0.9999998}
+  m_Center: {x: -0.34992158, y: 2.426732, z: 0}
 --- !u!4 &1704214694
 Transform:
   m_ObjectHideFlags: 0
@@ -124830,7 +125081,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerTag: Player
-  messageText: "\u6211\u8BF4\u4E86\u4F1A\u624E\u5230....\nI said it would prick ..."
+  messageText: "\u4E0E\u5176\u8D70\u6377\u5F84\uFF0C\u4E0D\u5982\u60F3\u60F3\u5982\u4F55\u5206\u914D\u80FD\u91CF\nI
+    said it would prick ..."
   respawnPoint: {fileID: 1283357815}
   fadeToBlackSeconds: 0.8
   blackHoldSeconds: 1.2
@@ -124869,7 +125121,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0.71428823, y: -0, z: -0, w: 0.69985175}
   m_LocalPosition: {x: 8.5, y: 4.8, z: 0.35}
-  m_LocalScale: {x: 1.6576343, y: 3.296125, z: 24.929838}
+  m_LocalScale: {x: 1.6576343, y: 10.815404, z: 24.929838}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1283357815}
@@ -160540,39 +160792,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 83.684, y: 184.03, z: 4.037}
---- !u!21 &2092220808
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: SandStorm_ParticleMat
-  m_Shader: {fileID: 4800000, guid: 13671c380631170409759d59808921dd, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
-  stringTagMap:
-    RenderType: Transparent
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats: []
-    m_Colors:
-    - _Tint: {r: 1, g: 1, b: 1, a: 1}
-  m_BuildTextureStacks: []
 --- !u!1001 &2139387808
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -160691,6 +160910,23 @@ MonoBehaviour:
   oneEnergyLaunch: 10
   twoPlusEnergyLaunch: 15
   retriggerCooldown: 0.8
+  squashClip: {fileID: 0}
+  squashTarget: {fileID: 0}
+  levelAnimationSpeeds:
+  - 2
+  - 1.5
+  - 1
+  matchPlayerAirTime: 0
+  returnToFirstFrameOnFinish: 1
+  useAnimatorState: 0
+  animatorStateName: 
+  enableSquashDeform: 1
+  levelSquashDepths:
+  - 0.45
+  - 0.35
+  - 0.25
+  squashDuration: 0.4
+  squashWiden: 1.25
   enablePlayerCharging: 1
   maxEnergyLevel: 2
   startEnergyLevel: 0
@@ -160859,6 +161095,7 @@ SceneRoots:
   - {fileID: 1590830002}
   - {fileID: 93726212}
   - {fileID: 293524543}
+  - {fileID: 922769187}
   - {fileID: 1519890833}
   - {fileID: 553528423}
   - {fileID: 493017698}
@@ -160892,3 +161129,4 @@ SceneRoots:
   - {fileID: 950183071}
   - {fileID: 1808247002}
   - {fileID: 1183947479}
+  - {fileID: 1091092292}

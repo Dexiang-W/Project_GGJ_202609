@@ -249,6 +249,10 @@ public class GGJLevelResetManager : MonoBehaviour
                 cam.SetNormalMode();
                 cam.SnapToCurrentTarget();
             }
+
+            // 解除屏蔽：安全点若恰好位于某个相机触发区内，触发区会在下一帧巡检时
+            // 重新应用并立刻就位到该区域的机位（固定视角 / 拉远），而不是一直停在普通跟拍。
+            CameraTriggerVolume.SuppressCameraSwitching = false;
         }
         finally
         {
