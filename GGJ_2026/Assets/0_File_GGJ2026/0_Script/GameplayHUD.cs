@@ -38,6 +38,10 @@ public class GameplayHUD : MonoBehaviour
     private Outline messageOutline;
     private Coroutine messageFadeRoutine;
 
+    // 正式游玩 UI 的父节点（左上角能量格 + 耐力条）。过场期间可以整体隐藏，
+    // 避免黑幕还没淡出就先看到这些 UI。
+    private GameObject gameplayUiRoot;
+
     [Header("黑幕提示文字淡入淡出")]
     [Tooltip("提示文字淡入时长（秒），0 表示直接出现")]
     [SerializeField] private float messageFadeInSeconds = 0.45f;
@@ -308,6 +312,24 @@ public class GameplayHUD : MonoBehaviour
         blackImage.enabled = black;
     }
 
+    /// <summary>
+    /// 显示 / 隐藏正式游玩 UI（左上角能量格 + 耐力条）。
+    /// 标题 → 关卡的黑幕过场期间先隐藏，等关卡真正开始（FinishSpawn）再显示，
+    /// 避免黑幕还没淡出就先看到这些 UI。
+    /// </summary>
+    public void SetGameplayUiVisible(bool visible)
+    {
+        if (gameplayUiRoot != null)
+            gameplayUiRoot.SetActive(visible);
+    }
+
+    /// <summary>静态便捷入口：HUD 已存在时切换游玩 UI 显隐（不存在则什么都不做）。</summary>
+    public static void SetGameplayUiVisibleIfExists(bool visible)
+    {
+        if (_instance != null)
+            _instance.SetGameplayUiVisible(visible);
+    }
+
     // ---------------------------------------------------------------- 内部
 
     private void BuildUI()
@@ -362,8 +384,17 @@ public class GameplayHUD : MonoBehaviour
         messageOutline = outline;
         HideMessage();
 
+        // —— 正式游玩 UI 根节点：能量格 + 耐力条都挂在它下面，方便过场期间整体隐藏 ——
+        // 必须铺满整个 Canvas，子物体才能继续按屏幕左上角定位。
+        gameplayUiRoot = CreateUiChild("GameplayUI", gameObject.transform);
+        RectTransform gameplayUiRT = gameplayUiRoot.GetComponent<RectTransform>();
+        gameplayUiRT.anchorMin = Vector2.zero;
+        gameplayUiRT.anchorMax = Vector2.one;
+        gameplayUiRT.offsetMin = Vector2.zero;
+        gameplayUiRT.offsetMax = Vector2.zero;
+
         // —— 左上角能量三格 ——
-        GameObject energyGO = CreateUiChild("EnergyPanel", gameObject.transform);
+        GameObject energyGO = CreateUiChild("EnergyPanel", gameplayUiRoot.transform);
         RectTransform energyRT = energyGO.GetComponent<RectTransform>();
         energyRT.anchorMin = new Vector2(0f, 1f);
         energyRT.anchorMax = new Vector2(0f, 1f);
@@ -393,7 +424,7 @@ public class GameplayHUD : MonoBehaviour
         }
 
         // —— 耐力条（能量格正下方；冲刺用 Shift 消耗，松开自动恢复） ——
-        GameObject staminaGO = CreateUiChild("StaminaBar", gameObject.transform);
+        GameObject staminaGO = CreateUiChild("StaminaBar", gameplayUiRoot.transform);
         RectTransform staminaRT = staminaGO.GetComponent<RectTransform>();
         staminaRT.anchorMin = new Vector2(0f, 1f);
         staminaRT.anchorMax = new Vector2(0f, 1f);

@@ -9,9 +9,13 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// 关卡切换触发区（Volume）：玩家进入后自动完成一次“跨场景转场”。
 ///
-/// 流程：锁定操作 → 画面渐黑 → （黑幕中）把玩家设为跨场景保留 →
+/// 流程：进入触发区后【先继续向前跑一段距离】 → 锁定操作 → 画面渐黑 →
+///       （黑幕中）把玩家设为跨场景保留 →
 ///       加载 destinationSceneName → 清理目标场景里自带的“演示用玩家/相机” →
 ///       把玩家放到 spawnObjectName 出生点 → 黑幕淡出 → 交还操作。
+///
+/// 注意：本脚本只负责“关卡之间”的转场，和标题（Begin_Menu）里 GameFlowController
+///       那套入场流程完全独立，两者的黑幕、参数、时序互不影响。
 ///
 /// 挂法：给空物体加 BoxCollider（勾 Is Trigger，大小调成区域大小），再加本组件。
 /// Inspector 里填目标场景名、出生点物体名、各段时间即可，无需写代码。
@@ -58,6 +62,14 @@ public class LevelTransitionZone : MonoBehaviour
     [SerializeField] private float blackHoldSeconds = 1.0f;
     [Tooltip("黑幕淡出所需时长")]
     [SerializeField] private float fadeFromBlackSeconds = 0.9f;
+
+    [Header("进区后先跑一段再黑屏")]
+    [Tooltip("进入触发区后不立刻停住，而是自动继续向前跑这么多米，才开始锁操作 + 黑屏。0 = 立即黑屏。")]
+    [SerializeField] private float continueRunDistance = 3f;
+    [Tooltip("继续跑的时间上限（秒）：被地形挡住、走不满上面的距离时，到点也会开始黑屏，避免卡住不转场")]
+    [SerializeField] private float continueRunMaxSeconds = 2.5f;
+    [Tooltip("继续跑的方向：1 = 向右，-1 = 向左")]
+    [SerializeField] private float continueRunAxis = 1f;
 
     [Header("选项")]
     [Tooltip("传送到出生点后把角色朝向改为出生点朝向（Y 轴）")]
@@ -144,7 +156,10 @@ public class LevelTransitionZone : MonoBehaviour
             blackHoldSeconds,
             fadeFromBlackSeconds,
             useSpawnFacing,
-            cleanupExtraPlayers);
+            cleanupExtraPlayers,
+            continueRunDistance,
+            continueRunMaxSeconds,
+            continueRunAxis);
     }
 }
 
@@ -163,6 +178,11 @@ public class LevelSceneRunner : MonoBehaviour
     private float fadeFromBlackSeconds;
     private bool useSpawnFacing;
     private bool cleanupExtraPlayers;
+
+    // 进区后先继续跑一段再黑屏
+    private float continueRunDistance;
+    private float continueRunMaxSeconds;
+    private float continueRunAxis;
 
     private ThirdPersonController player;
     private Camera mainCamera;
@@ -183,7 +203,10 @@ public class LevelSceneRunner : MonoBehaviour
         float holdBlack,
         float fromBlack,
         bool useFacing,
-        bool cleanupExtra)
+        bool cleanupExtra,
+        float runBeforeFadeDistance,
+        float runBeforeFadeMaxSeconds,
+        float runBeforeFadeAxis)
     {
         sceneName = targetScene;
         spawnName = spawnObject;
@@ -194,6 +217,9 @@ public class LevelSceneRunner : MonoBehaviour
         fadeFromBlackSeconds = fromBlack;
         useSpawnFacing = useFacing;
         cleanupExtraPlayers = cleanupExtra;
+        continueRunDistance = runBeforeFadeDistance;
+        continueRunMaxSeconds = runBeforeFadeMaxSeconds;
+        continueRunAxis = runBeforeFadeAxis;
 
         StartCoroutine(Run());
     }
@@ -232,7 +258,10 @@ public class LevelSceneRunner : MonoBehaviour
             yield break;
         }
 
-        // —— 1. 锁定操作 ——
+        // —— 1. 进区后先继续向前跑一段，跑完再锁定操作 ——
+        if (continueRunDistance > 0f)
+            yield return ContinueRunRoutine();
+
         DisablePlayerInput();
 
         // —— 2. 画面渐黑 ——
@@ -321,6 +350,46 @@ public class LevelSceneRunner : MonoBehaviour
     }
 
     // ---------------------------------------------------------------- 工具
+
+    /// <summary>
+    /// 进区后“再走一段”：不锁操作，只把前进轴按住，让角色自己向前跑
+    /// continueRunDistance 米（最多 continueRunMaxSeconds 秒）之后才开始黑屏。
+    /// 关卡的节奏因此和以前一致：进触发区 → 再跑一段 → 黑屏 → 下一关。
+    /// </summary>
+    private IEnumerator ContinueRunRoutine()
+    {
+        if (player == null)
+            yield break;
+
+        var inputs = player.GetComponent<StarterAssetsInputs>();
+        float direction = continueRunAxis >= 0f ? 1f : -1f;
+
+        float startX = player.transform.position.x;
+        float elapsed = 0f;
+        float maxSeconds = Mathf.Max(0.05f, continueRunMaxSeconds);
+        float distance = Mathf.Max(0f, continueRunDistance);
+
+        while (elapsed < maxSeconds)
+        {
+            if (player == null)
+                yield break;
+
+            // 只驱动前进轴；跳跃 / 冲刺等仍交给玩家
+            if (inputs != null)
+                inputs.MoveInput(new Vector2(direction, 0f));
+
+            elapsed += Time.deltaTime;
+
+            // 本项目角色只沿 X 轴跑，所以用 x 位移判断“已经跑够了”
+            if (Mathf.Abs(player.transform.position.x - startX) >= distance)
+                break;
+
+            yield return null;
+        }
+
+        if (inputs != null)
+            inputs.MoveInput(Vector2.zero);
+    }
 
     private void DisablePlayerInput()
     {

@@ -264,6 +264,26 @@ public class CameraFollowController : MonoBehaviour
     public bool IsLocked => currentMode == CameraMode.LockedPoint;
 
     /// <summary>
+    /// 标题阶段是正交，进入正式关卡后切回透视时调用：刷新 Normal 模式的基准 FOV，
+    /// 并统一所有关卡的跟拍参数（Begin Menu 不会调用到这里，标题参数保持现状）。
+    /// </summary>
+    public void OnSwitchedToPerspective(float fov)
+    {
+        initialFOV = fov;
+        targetFOV = fov;
+
+        // 统一关卡默认跟拍参数（与 Main Camera.prefab 一致）
+        offset = new Vector3(2f, 4.5f, -6f);
+        followSmoothSpeed = 0.125f;
+        followRotationOffset = new Vector3(20f, 0f, 0f);
+        zoomOffset = new Vector3(0f, 8f, -20f);
+        zoomFOV = 65f;
+        fixedFOV = 60f;
+        modeSwitchBlendSeconds = 1.2f;
+        transitionSpeed = 2f;
+    }
+
+    /// <summary>
     /// 开始一次机位过渡：记录起点姿态，让位置 / 旋转 / FOV 在 seconds 内一起缓动到新机位。
     /// seconds ≤ 0 表示不启用缓慢过渡（维持旧手感）。
     /// </summary>

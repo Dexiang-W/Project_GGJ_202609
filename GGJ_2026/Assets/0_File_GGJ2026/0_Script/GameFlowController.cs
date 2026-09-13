@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using StarterAssets;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -24,6 +25,7 @@ public class GameFlowController : MonoBehaviour
     public enum GameFlowState
     {
         Attract,
+        MovingToFocus,   // 点击后先跑到当前/下一张原画中心
         Starting,
         Spawning,
         Playing
@@ -74,6 +76,10 @@ public class GameFlowController : MonoBehaviour
     [SerializeField] private AudioClip attractMusic;
     [SerializeField] private AudioClip gameplayMusic;
 
+    [Header("标题与正式关卡相机")]
+    [Tooltip("标题阶段用 2D 无透视（正交），进入正式关卡后切回透视。这里指定正式关卡的主相机 FOV。")]
+    [SerializeField] private float gameplayFieldOfView = 60f;
+
     [Header("标题阶段")]
     [Tooltip("1 = 持续向右跑动")]
     [SerializeField] private float attractRunAxis = 1f;
@@ -81,6 +87,39 @@ public class GameFlowController : MonoBehaviour
     [SerializeField] private bool attractSprint = true;
     [Tooltip("进入标题画面时是否把相机瞬间吸到玩家身后的机位（避免开场镜头从远处猛甩过来）")]
     [SerializeField] private bool snapCameraOnAttractStart = true;
+
+    [Header("标题跑动速度（独立于正式关卡，进关卡自动还原）")]
+    [Tooltip("标题阶段角色的普通跑速（m/s）。默认 2 = 角色预制体原值，改这里只影响标题循环跑动")]
+    [SerializeField] private float attractRunSpeed = 2.0f;
+    [Tooltip("标题阶段角色的冲刺跑速（m/s）。勾选上面的「Attract Sprint」时用这个速度，默认 5.335 = 角色预制体原值")]
+    [SerializeField] private float attractSprintSpeed = 5.335f;
+    [Tooltip("整体速度倍率（1 = 保持上面两个数值）。想整体快速调快 / 调慢时用，例如 1.5 = 标题跑速快 50%")]
+    [SerializeField] private float attractSpeedMultiplier = 1f;
+
+    [Header("标题开场黑屏")]
+    [Tooltip("标题场景一开始先盖一层全屏黑幕，等角色真正跑起来再淡入（用来藏住开场加载 / 卡顿）")]
+    [SerializeField] private bool startWithBlackScreen = true;
+    [Tooltip("开场黑幕淡入时长（秒）")]
+    [SerializeField] private float attractFadeInDuration = 1.0f;
+    [Tooltip("检测到角色开始跑动后，黑幕再多停留多久才淡入（秒）")]
+    [SerializeField] private float attractIntroHoldSeconds = 0.4f;
+    [Tooltip("角色从出生点移动多少米算「跑起来了」")]
+    [SerializeField] private float attractIntroMoveThreshold = 0.6f;
+    [Tooltip("开场黑幕最长等待时长（秒）；超时后无论角色是否跑起来都会淡入")]
+    [SerializeField] private float attractIntroMaxWaitSeconds = 3f;
+
+    [Header("标题点击后跑到原画中心")]
+    [Tooltip("开启后，点击屏幕不会立刻开始游戏，而是先让玩家跑到当前/下一张原画切片的中心再进入开始序列。")]
+    [SerializeField] private bool runToFocusPointOnStart = true;
+    [Tooltip("原画切片上的跑停焦点，按从左到右顺序拖入。玩家会跑向自己前方最近的那个焦点。\n" +
+             "想缩短跑动距离（不想只停在切片正中），用菜单 GGJ2026/标题/标题焦点工具（左中右）生成每片左/中/右多个焦点。")]
+    [SerializeField] private Transform[] titleFocusPoints;
+    [Tooltip("玩家到达中心点的 x 轴容差（米）")]
+    [SerializeField] private float focusPointArriveDistance = 0.25f;
+    [Tooltip("跑向中心点时的移动输入轴（1 = 向右）")]
+    [SerializeField] private float runToFocusAxis = 1f;
+    [Tooltip("接近中心点前多少米开始减速，避免冲过头")]
+    [SerializeField] private float focusPointSlowDownDistance = 1.5f;
 
     [Header("过场时间（秒）")]
     [SerializeField] private float textFadeDuration = 0.6f;
@@ -108,6 +147,12 @@ public class GameFlowController : MonoBehaviour
     [Tooltip("定格结束后，相机从镜头点缓慢“追回/跟上”玩家的过渡时长（秒）。数值越大镜头回得越慢、越舒缓（建议 1~4 之间试）")]
     [SerializeField] private float resumeFollowBlendSeconds = 1.6f;
 
+    [Header("生成落地（全程在黑幕里）")]
+    [Tooltip("生成动画播完后，继续在黑幕里等待角色落到地面站稳的最长时长（秒）。生成点悬空时角色会自由落体，等它落地再亮屏，玩家就不会看到“从天上掉下来”")]
+    [SerializeField] private float maxSpawnGroundWaitSeconds = 6f;
+    [Tooltip("角色落地后黑幕再多停留一小会（秒）才淡出，避开落地瞬间的贴地修正 / 小弹跳")]
+    [SerializeField] private float spawnGroundSettleSeconds = 0.25f;
+
     [Header("调试")]
     [SerializeField] private bool skipSpawnSequence = false;
     private StarterAssetsInputs playerInputs;
@@ -132,6 +177,14 @@ public class GameFlowController : MonoBehaviour
     private Transform spawnVisualRoot;
     private Vector3 spawnVisualTargetScale;
 
+    // 标题开场黑幕协程
+    private Coroutine attractIntroRoutine;
+
+    // 标题阶段临时改过的角色速度，进正式关卡时还原
+    private float baseMoveSpeed;
+    private float baseSprintSpeed;
+    private bool baseSpeedsCaptured;
+
 #if ENABLE_INPUT_SYSTEM
     private UnityEngine.InputSystem.PlayerInput playerInputComponent;
 #endif
@@ -152,7 +205,10 @@ public class GameFlowController : MonoBehaviour
         {
             if (WasStartPressed())
             {
-                StartCoroutine(StartGameSequence());
+                if (runToFocusPointOnStart)
+                    StartCoroutine(MoveToFocusPointRoutine());
+                else
+                    StartCoroutine(StartGameSequence());
                 return;
             }
 
@@ -165,7 +221,8 @@ public class GameFlowController : MonoBehaviour
             playerInputs.MoveInput(new Vector2(autoRunAxis, 0f));
             playerInputs.LookInput(Vector2.zero);
             playerInputs.JumpInput(false);
-            playerInputs.SprintInput(state == GameFlowState.Attract && attractSprint);
+            bool canSprint = state == GameFlowState.Attract || state == GameFlowState.MovingToFocus;
+            playerInputs.SprintInput(canSprint && attractSprint);
         }
     }
 
@@ -173,7 +230,12 @@ public class GameFlowController : MonoBehaviour
     [ContextMenu("开始游戏")]
     public void BeginGame()
     {
-        if (state == GameFlowState.Attract && !sequenceStarted)
+        if (state != GameFlowState.Attract || sequenceStarted)
+            return;
+
+        if (runToFocusPointOnStart)
+            StartCoroutine(MoveToFocusPointRoutine());
+        else
             StartCoroutine(StartGameSequence());
     }
 
@@ -258,7 +320,108 @@ public class GameFlowController : MonoBehaviour
         if (grayscaleController != null)
             grayscaleController.SetGrayscale();
 
-        PlayMusic(attractMusic);
+        // 标题 BGM：统一交给 AudioManager 按“关卡配乐表”播放 —— 表里加一行 Begin_Menu 即可配置
+        // （musicClip 留空 = 标题静音）。只有在 AudioManager 没有可播的标题音乐时，
+        // 才回退到本脚本自己的 attractMusic。
+        if (!AudioManager.BeginTitleAudio())
+            PlayMusic(attractMusic);
+
+        // 标题阶段用独立速度（进正式关卡时会还原）
+        ApplyAttractSpeeds();
+
+        // 开场先盖黑幕：等角色真正跑起来再淡入，把开场加载 / 编译卡顿藏在黑幕里
+        if (startWithBlackScreen && titleUI != null)
+        {
+            titleUI.SetBlackScreen(true);
+            titleUI.SetTextVisible(false);
+            attractIntroRoutine = StartCoroutine(AttractIntroRoutine());
+        }
+    }
+
+    /// <summary>
+    /// 开场黑幕：先全黑，等角色从出生点真正跑起来（移动超过阈值）后，
+    /// 再把黑幕淡出、标题文字淡入。这样玩家看到的第一帧就已经是跑动中的画面。
+    /// </summary>
+    private IEnumerator AttractIntroRoutine()
+    {
+        Vector3 startPos = playerController != null ? playerController.transform.position : Vector3.zero;
+
+        // 先过一帧，让首帧的加载尖峰过去
+        yield return null;
+
+        float deadline = Time.time + Mathf.Max(0.1f, attractIntroMaxWaitSeconds);
+        float threshold = Mathf.Max(0.01f, attractIntroMoveThreshold);
+
+        while (Time.time < deadline)
+        {
+            if (playerController == null)
+                break;
+
+            float moved = Mathf.Abs(playerController.transform.position.x - startPos.x);
+            if (moved >= threshold)
+                break;
+
+            yield return null;
+        }
+
+        if (attractIntroHoldSeconds > 0f)
+            yield return new WaitForSeconds(attractIntroHoldSeconds);
+
+        if (titleUI != null)
+        {
+            StartCoroutine(titleUI.FadeFromBlackRoutine(attractFadeInDuration));
+            StartCoroutine(titleUI.FadeInTextsRoutine(attractFadeInDuration));
+        }
+
+        attractIntroRoutine = null;
+    }
+
+    /// <summary>玩家在黑幕还没淡完就点了开始：立刻结束开场黑幕，避免和过场黑幕打架。</summary>
+    private void StopAttractIntro()
+    {
+        if (attractIntroRoutine == null)
+            return;
+
+        StopCoroutine(attractIntroRoutine);
+        attractIntroRoutine = null;
+
+        if (titleUI != null)
+        {
+            titleUI.SetBlackScreen(false);
+            titleUI.SetTextVisible(true);
+        }
+    }
+
+    /// <summary>
+    /// 标题阶段用独立的移动速度：直接写入「标题普通跑速 / 冲刺跑速（m/s）」× 倍率，
+    /// 不依赖角色预制体自身的数值；进正式关卡时由 RestoreGameplaySpeeds() 还原回预制体原值。
+    /// </summary>
+    private void ApplyAttractSpeeds()
+    {
+        if (playerController == null)
+            return;
+
+        if (!baseSpeedsCaptured)
+        {
+            baseMoveSpeed = playerController.MoveSpeed;
+            baseSprintSpeed = playerController.SprintSpeed;
+            baseSpeedsCaptured = true;
+        }
+
+        float multiplier = Mathf.Max(0.01f, attractSpeedMultiplier);
+        playerController.MoveSpeed = Mathf.Max(0.01f, attractRunSpeed) * multiplier;
+        playerController.SprintSpeed = Mathf.Max(0.01f, attractSprintSpeed) * multiplier;
+    }
+
+    /// <summary>进入正式关卡前，把角色速度还原成原本的数值。</summary>
+    private void RestoreGameplaySpeeds()
+    {
+        if (playerController == null || !baseSpeedsCaptured)
+            return;
+
+        playerController.MoveSpeed = baseMoveSpeed;
+        playerController.SprintSpeed = baseSprintSpeed;
+        baseSpeedsCaptured = false;
     }
 
     /// <summary>停用当前场景里所有相机触发区（CameraTriggerVolume）。标题循环需要相机恒定跟随，
@@ -382,10 +545,107 @@ public class GameFlowController : MonoBehaviour
         mainCamera.transform.position = playerController.transform.position + attractCameraOffset;
     }
 
+    /// <summary>
+    /// 点击后让玩家先跑到当前/下一张原画切片的中心，再开始游戏。
+    /// 这样无论玩家在标题循环的哪个位置点击，都会先“跑一定距离”站到合适构图位置。
+    /// </summary>
+    private IEnumerator MoveToFocusPointRoutine()
+    {
+        sequenceStarted = true;
+        state = GameFlowState.MovingToFocus;
+        StopAttractIntro();
+
+        // Inspector 没拖焦点时，也支持按场景里 TitleFocusPoint_1/2/... 的名字自动查找
+        if (titleFocusPoints == null || titleFocusPoints.Length == 0)
+            titleFocusPoints = FindTitleFocusPointsByName();
+
+        Transform target = PickNextFocusPoint();
+        if (target == null)
+        {
+            Debug.LogWarning("[GameFlowController] 未配置标题原画中心点（Title Focus Points），直接进入开始序列。", this);
+            StartCoroutine(StartGameSequence());
+            yield break;
+        }
+
+        driveInput = true;
+
+        float timeout = 10f;
+        float elapsed = 0f;
+        while (elapsed < timeout)
+        {
+            if (playerController == null)
+                break;
+
+            float px = playerController.transform.position.x;
+            float tx = target.position.x;
+            float remaining = tx - px;
+
+            if (Mathf.Abs(remaining) <= focusPointArriveDistance)
+                break;
+
+            // 接近目标前减速，防止冲过头
+            float direction = Mathf.Sign(remaining);
+            if (Mathf.Abs(remaining) < focusPointSlowDownDistance)
+                autoRunAxis = direction * Mathf.Lerp(0.2f, 1f, Mathf.Abs(remaining) / focusPointSlowDownDistance);
+            else
+                autoRunAxis = direction * runToFocusAxis;
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // 到达目标点后停稳一小会，再进入开始序列
+        autoRunAxis = 0f;
+        if (playerInputs != null)
+            playerInputs.MoveInput(Vector2.zero);
+
+        yield return new WaitForSeconds(0.15f);
+
+        StartCoroutine(StartGameSequence());
+    }
+
+    /// <summary>选择玩家前方（x 更大）最近的焦点中心；若已超过所有焦点，则选最后一个。</summary>
+    private Transform PickNextFocusPoint()
+    {
+        if (titleFocusPoints == null || titleFocusPoints.Length == 0)
+            return null;
+
+        float px = playerController != null ? playerController.transform.position.x : float.MinValue;
+        Transform chosen = null;
+        foreach (var t in titleFocusPoints)
+        {
+            if (t == null)
+                continue;
+            if (t.position.x >= px - focusPointArriveDistance)
+                return t;
+            chosen = t;
+        }
+        return chosen;
+    }
+
+    /// <summary>按名字 TitleFocusPoint_1/2/... 在场景里查找焦点（作为 Inspector 没拖引用的兜底）。</summary>
+    private Transform[] FindTitleFocusPointsByName()
+    {
+        var list = new List<Transform>();
+        // 每张原画可能生成多个焦点（左/中/右），上限给宽松一些
+        for (int i = 1; i <= 128; i++)
+        {
+            GameObject go = GameObject.Find($"TitleFocusPoint_{i}");
+            if (go == null)
+                break;
+            list.Add(go.transform);
+        }
+        return list.ToArray();
+    }
+
     private IEnumerator StartGameSequence()
     {
         sequenceStarted = true;
         state = GameFlowState.Starting;
+        StopAttractIntro();
+
+        // 角色已在标题阶段站定 → 还原正式关卡的移动速度
+        RestoreGameplaySpeeds();
 
         if (titleUI != null)
             StartCoroutine(titleUI.FadeOutTextsRoutine(textFadeDuration));
@@ -393,9 +653,14 @@ public class GameFlowController : MonoBehaviour
         if (grayscaleController != null)
             StartCoroutine(grayscaleController.FadeToFullColorRoutine(colorFadeDuration));
 
-        PlayMusic(gameplayMusic);
+        // 音乐统一由 AudioManager 按“关卡配乐表”接管（标题阶段已在播标题 BGM），
+        // 这里不再用旧音乐源重复播放，避免双份音乐叠加；仅在 AudioManager 缺失时回退。
+        if (AudioManager.Instance == null)
+            PlayMusic(gameplayMusic);
 
-        yield return RampAutoRun(attractRunAxis, 0f, stopDuration);
+        // 若刚从“跑到原画中心”状态过来，autoRunAxis 已经降到 0；否则从 attractRunAxis 开始减速。
+        float runAxisAtStart = autoRunAxis;
+        yield return RampAutoRun(runAxisAtStart, 0f, stopDuration);
         autoRunAxis = 0f;
 
         if (titleUI != null)
@@ -422,9 +687,10 @@ public class GameFlowController : MonoBehaviour
             playerInputs.SprintInput(false);
         }
 
-        // 一进入正式关卡（画面还处于黑幕）就创建 HUD：
-        // 左上角能量三格（空能量，浅绿）随黑幕淡出一起出现，而不是等碰到能量拾取物才显示。
+        // 一进入正式关卡（画面还处于黑幕）就创建 HUD，但先隐藏正式游玩 UI，
+        // 避免黑幕还没淡出就先看到左上角能量三格 / 耐力条；等关卡真正开始再显示。
         GameplayHUD.EnsureCreated();
+        GameplayHUD.SetGameplayUiVisibleIfExists(false);
 
         if (attractSceneRoot != null)
             attractSceneRoot.SetActive(false);
@@ -451,6 +717,9 @@ public class GameFlowController : MonoBehaviour
 
             yield return null; // 等一帧让场景物体激活完成
 
+            // 标题阶段是正交 2D，进入正式关卡后恢复 3D 透视视角
+            SwitchToGameplayCameraProjection();
+
             ResolveSpawnPointInLoadedScene();
 
             TeleportPlayerToSpawn();
@@ -461,38 +730,35 @@ public class GameFlowController : MonoBehaviour
             if (playerInputs != null)
                 playerInputs.MoveInput(Vector2.zero);
 
-            // 让“从方块里弹出”作为生成的第一瞬间发生：
-            // 先在黑幕内把角色视觉压成 0，再让黑幕淡出与弹出动画同时进行，
-            // 避免出现“先完整站在出生点 → 再消失 → 才弹出”的割裂感。
+            // 生成流程全部在黑幕内完成：
+            //  1) 播完“从天上落下 / 弹出”的生成动画；
+            //  2) 继续等角色真正落到地面站稳（生成点若悬空，此时发生的是物理自由落体）；
+            //  3) 到这一步角色已站定、音乐也已在正常播放，才淡出黑幕亮屏。
+            // 这样玩家永远不会看到“角色从天上掉下来”或“音乐还在淡入”的画面。
             Transform player = playerController.transform;
 
             if (!skipSpawnSequence)
             {
                 if (spawnAnimationClip != null)
                 {
-                    // 自定义生成动画 Clip：与黑幕淡出同时播放
-                    if (titleUI != null && withCinematics)
-                        yield return RunConcurrent(PlaySpawnAnimation(player),
-                                                   titleUI.FadeFromBlackRoutine(fadeFromBlackDuration));
-                    else
-                        yield return PlaySpawnAnimation(player);
+                    yield return PlaySpawnAnimation(player);
                     PlaySpawnEffects();
                 }
                 else
                 {
                     PlaySpawnEffects();
                     PrepareScalePop(player);   // 缓存原大小并压成 0（画面此时仍全黑）
-
-                    if (titleUI != null && withCinematics)
-                        yield return FadeInWithScalePop(player);
-                    else
-                        yield return PopInSpawn(player);
+                    yield return PopInSpawn(player);
                 }
             }
-            else if (titleUI != null && withCinematics)
-            {
+
+            // 关键：无论有没有播生成动画，都在黑幕里等角色落到地面站稳，
+            // 避免淡出后看到角色从天上掉下来的过程。
+            yield return WaitUntilPlayerSettled();
+
+            // 人物生成完毕、音乐已正常播放 → 这时才让黑幕淡出
+            if (titleUI != null && withCinematics)
                 yield return titleUI.FadeFromBlackRoutine(fadeFromBlackDuration);
-            }
 
             // 玩家已出现在画面中：让出生镜头点“定格”一小会，再平滑切回跟拍玩家
             BeginStartCameraFollowReturn();
@@ -521,6 +787,8 @@ public class GameFlowController : MonoBehaviour
 
         if (skipSpawnSequence || playerController == null)
         {
+            yield return WaitUntilPlayerSettled();
+
             if (titleUI != null)
                 yield return titleUI.FadeFromBlackRoutine(fadeFromBlackDuration);
         }
@@ -528,25 +796,23 @@ public class GameFlowController : MonoBehaviour
         {
             Transform player = playerController.transform;
 
+            // 与正式转场一致：先在黑幕内播完生成动画，音乐就绪后才淡出亮屏
             if (spawnAnimationClip != null)
             {
-                if (titleUI != null)
-                    yield return RunConcurrent(PlaySpawnAnimation(player),
-                                               titleUI.FadeFromBlackRoutine(fadeFromBlackDuration));
-                else
-                    yield return PlaySpawnAnimation(player);
+                yield return PlaySpawnAnimation(player);
                 PlaySpawnEffects();
             }
             else
             {
                 PlaySpawnEffects();
                 PrepareScalePop(player);
-
-                if (titleUI != null)
-                    yield return FadeInWithScalePop(player);
-                else
-                    yield return PopInSpawn(player);
+                yield return PopInSpawn(player);
             }
+
+            yield return WaitUntilPlayerSettled();
+
+            if (titleUI != null)
+                yield return titleUI.FadeFromBlackRoutine(fadeFromBlackDuration);
         }
 
         // 玩家已出现：让出生镜头点定格一会，再平滑切回跟拍玩家
@@ -708,6 +974,35 @@ public class GameFlowController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 标题阶段的主相机是正交（2D 无透视），进入正式关卡后需要切回透视。
+    /// 在黑幕期间完成切换，玩家正式看到画面时已经是 3D 视角。
+    /// </summary>
+    private void SwitchToGameplayCameraProjection()
+    {
+        if (mainCamera == null)
+            return;
+
+        Camera cam = mainCamera.GetComponent<Camera>();
+        if (cam != null)
+        {
+            cam.orthographic = false;
+            cam.fieldOfView = gameplayFieldOfView;
+            cam.nearClipPlane = 0.3f;
+            cam.farClipPlane = 1000f;
+        }
+
+        // 通知 CameraFollowController 刷新基准 FOV 并统一关卡默认参数。
+        // 若标题场景忘挂该组件，在这里自动补上，保证进关卡后相机逻辑可用。
+        CameraFollowController follow = mainCamera.GetComponent<CameraFollowController>();
+        if (follow == null)
+        {
+            follow = mainCamera.gameObject.AddComponent<CameraFollowController>();
+            Debug.Log("[GameFlowController] 主相机缺少 CameraFollowController，已自动补加。", mainCamera);
+        }
+        follow.OnSwitchedToPerspective(gameplayFieldOfView);
+    }
+
     private void FinishSpawn()
     {
         autoRunAxis = 0f;
@@ -724,6 +1019,9 @@ public class GameFlowController : MonoBehaviour
 
         // 正式游玩开始时创建左上角能量 HUD（三格绿点 / Q 消耗 / 黑幕文字层），标题阶段不会出现
         GameplayHUD.EnsureCreated();
+
+        // 关卡已就绪（黑幕已淡出 / 角色已出现）→ 这时才显示能量格与耐力条
+        GameplayHUD.SetGameplayUiVisibleIfExists(true);
 
         state = GameFlowState.Playing;
         sequenceStarted = false;
@@ -788,28 +1086,6 @@ public class GameFlowController : MonoBehaviour
         spawnVisualRoot.localScale = Vector3.zero;
     }
 
-    /// <summary>同时等待两个协程执行完毕（用于让“黑幕淡出”与“生成弹出”同步进行）。</summary>
-    private IEnumerator RunConcurrent(IEnumerator first, IEnumerator second)
-    {
-        Coroutine c1 = first != null ? StartCoroutine(first) : null;
-        Coroutine c2 = second != null ? StartCoroutine(second) : null;
-        if (c1 != null) yield return c1;
-        if (c2 != null) yield return c2;
-    }
-
-    /// <summary>黑幕淡出的同时播放“从方块里弹出”。</summary>
-    private IEnumerator FadeInWithScalePop(Transform player)
-    {
-        if (titleUI == null)
-        {
-            yield return PopInSpawn(player);
-            yield break;
-        }
-
-        yield return RunConcurrent(PopInSpawn(player),
-                                   titleUI.FadeFromBlackRoutine(fadeFromBlackDuration));
-    }
-
     private IEnumerator PopInSpawn(Transform player)
     {
         Transform visualRoot = spawnVisualRoot;
@@ -856,6 +1132,59 @@ public class GameFlowController : MonoBehaviour
         animation.Play(clipName);
 
         yield return new WaitForSeconds(spawnAnimationClip.length);
+    }
+
+    /// <summary>
+    /// 黑幕里“等角色落地站稳”：
+    /// 生成动画播完后角色可能仍悬在空中（生成点高于地面，或动画结束姿势停在半空），
+    /// 其后的自由落体与落地修正如果发生在黑幕淡出之后，玩家就会看到角色“从天上掉下来”。
+    /// 这里在画面仍全黑时等它真正踩到地面、竖直速度归零，再多留一小会才结束；
+    /// 返回之后调用方才会淡出黑幕。
+    /// </summary>
+    private IEnumerator WaitUntilPlayerSettled()
+    {
+        if (playerController == null)
+            yield break;
+
+        CharacterController characterController = playerController.GetComponent<CharacterController>();
+        float deadline = Time.time + Mathf.Max(0.1f, maxSpawnGroundWaitSeconds);
+
+        // 生成动画刚结束时接地状态还没刷新，先放两帧
+        yield return null;
+        yield return null;
+
+        // 角色还在自由落体时不接地；一直等到它真正踩到地面
+        while (!IsPlayerGrounded() && Time.time < deadline)
+            yield return null;
+
+        // 落地后再确认竖直速度已经归零，避开“刚触地 / 小弹跳”的瞬间
+        int settledFrames = 0;
+        while (settledFrames < 2 && Time.time < deadline)
+        {
+            float verticalSpeed = characterController != null ? characterController.velocity.y : 0f;
+            settledFrames = verticalSpeed > -0.5f ? settledFrames + 1 : 0;
+            yield return null;
+        }
+
+        // 落地后再黑屏停留一小会
+        if (spawnGroundSettleSeconds > 0f)
+            yield return new WaitForSeconds(spawnGroundSettleSeconds);
+    }
+
+    /// <summary>
+    /// 角色是否已踩在地面上：优先用 CharacterController 内建检测（不依赖角色的 GroundLayers 配置），
+    /// 没有 CharacterController 时退回角色的球形接地检测结果。
+    /// </summary>
+    private bool IsPlayerGrounded()
+    {
+        if (playerController == null)
+            return true;
+
+        CharacterController characterController = playerController.GetComponent<CharacterController>();
+        if (characterController != null)
+            return characterController.isGrounded;
+
+        return playerController.Grounded;
     }
 
     private void PlaySpawnEffects()

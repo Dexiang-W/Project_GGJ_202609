@@ -75,6 +75,61 @@ public static class GGJAudioSetupBuilder
             "素材引用与音量都已接好，可在 Project 窗口打开该预制体微调响度。", "知道了");
     }
 
+    [MenuItem("GGJ2026/音频/为配乐表添加“开始界面”行（Begin_Menu）")]
+    public static void AddBeginMenuProfileFromMenu()
+    {
+        if (!File.Exists(PrefabPath))
+        {
+            EditorUtility.DisplayDialog("GGJ2026 音频",
+                $"未找到音频管理预制体：\n{PrefabPath}\n\n" +
+                "请先执行“重建音频管理预制体（自动接入素材）”。", "知道了");
+            return;
+        }
+
+        GameObject prefabRoot = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            AudioManager am = prefabRoot != null ? prefabRoot.GetComponent<AudioManager>() : null;
+            if (am == null)
+            {
+                EditorUtility.DisplayDialog("GGJ2026 音频", "预制体上没有 AudioManager 组件。", "知道了");
+                return;
+            }
+
+            const string beginScene = "Begin_Menu";
+            if (FindProfile(am, beginScene) != null)
+            {
+                EditorUtility.DisplayDialog("GGJ2026 音频",
+                    $"配乐表里已经有 {beginScene} 这一行了，未做修改。\n\n" +
+                    $"想调整标题音乐：Project 窗口打开 {PrefabPath}，改那一行的 musicClip / musicVolume。", "知道了");
+                return;
+            }
+
+            // 只往表里插一行，其它已调好的音量 / 素材引用原样保留
+            var list = new List<AudioManager.SceneAudioProfile>
+            {
+                MakeProfile(beginScene, am.musicClip, 0.3f, null, 0.2f)
+            };
+            if (am.sceneAudioProfiles != null)
+                list.AddRange(am.sceneAudioProfiles);
+            am.sceneAudioProfiles = list.ToArray();
+
+            PrefabUtility.SaveAsPrefabAsset(prefabRoot, PrefabPath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            EditorUtility.DisplayDialog("GGJ2026 音频",
+                $"已为配乐表添加 {beginScene} 行（放在第一行）。\n\n" +
+                "标题 BGM 现在接的是默认主音乐；想换标题专用曲子、或让标题阶段静音，\n" +
+                "就打开预制体改这一行的 musicClip（留空 = 标题无音乐）。", "知道了");
+        }
+        finally
+        {
+            if (prefabRoot != null)
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+        }
+    }
+
     // ---------------------------------------------------------------- 构建
 
     private static void BuildAudioManagerPrefab()
@@ -141,6 +196,9 @@ public static class GGJAudioSetupBuilder
         // 直接在预制体的这行里把对应关卡 musicClip 换掉即可，不用再跑重建。
         am.sceneAudioProfiles = new[]
         {
+            // 开始界面（Begin_Menu）：标题 / 循环演示阶段的 BGM。想换成标题专用曲子就在这里换；
+            // musicClip 留空 = 标题阶段静音。
+            MakeProfile("Begin_Menu", music, 0.3f, null, 0.2f),
             MakeProfile("Level1", music, 0.3f, ambience, 0.2f),
             MakeProfile("Level2", music, 0.3f, ambCore, 0.2f),
             MakeProfile("Level3+4", music, 0.3f, ambWind, 0.2f),
@@ -162,6 +220,19 @@ public static class GGJAudioSetupBuilder
     }
 
     // ---------------------------------------------------------------- 工具
+
+    private static AudioManager.SceneAudioProfile FindProfile(AudioManager am, string sceneName)
+    {
+        if (am == null || am.sceneAudioProfiles == null)
+            return null;
+
+        foreach (AudioManager.SceneAudioProfile p in am.sceneAudioProfiles)
+        {
+            if (p != null && p.sceneName == sceneName)
+                return p;
+        }
+        return null;
+    }
 
     private static AudioManager.SceneAudioProfile MakeProfile(string sceneName,
         AudioClip music, float musicVolume, AudioClip ambience, float ambienceVolume)

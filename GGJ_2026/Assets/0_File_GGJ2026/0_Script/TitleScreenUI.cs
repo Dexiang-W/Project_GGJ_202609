@@ -33,6 +33,9 @@ public class TitleScreenUI : MonoBehaviour
     {
         Instance = this;
 
+        // 场景/预制体里如果没挂黑幕（FadePanel 被删或忘拖），运行时补一个，保证过场淡入淡出可用
+        EnsureFadeImage();
+
         if (titleText != null)
             titleText.text = gameTitle;
 
@@ -46,6 +49,31 @@ public class TitleScreenUI : MonoBehaviour
             textGroup.alpha = 1f;
             textGroup.blocksRaycasts = false;
         }
+    }
+
+    /// <summary>
+    /// 兜底：fadeImage 为空（例如标题预制体里的 FadePanel 被删掉）时，运行时创建一个全屏黑幕。
+    /// 放在同级最后一个，保证盖住标题文字；raycastTarget = false，不挡点击。
+    /// </summary>
+    private void EnsureFadeImage()
+    {
+        if (fadeImage != null)
+            return;
+
+        GameObject go = new GameObject("FadePanel_Runtime", typeof(RectTransform));
+        go.transform.SetParent(transform, false);
+
+        RectTransform rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+        rt.SetAsLastSibling();
+
+        fadeImage = go.AddComponent<Image>();
+        fadeImage.color = new Color(0f, 0f, 0f, 0f);
+        fadeImage.raycastTarget = false;
+        fadeImage.enabled = false;
     }
 
     private void OnDestroy()

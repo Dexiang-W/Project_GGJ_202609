@@ -5681,6 +5681,13 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  energyPlantMode: 0
+  chargeEnergyCost: 1
+  multiLevelCharge: 0
+  hiddenWhenCharged: []
+  plantAnimators: []
+  ungrownStateName: None
+  reclaimHighlightColor: {r: 1, g: 0.85, b: 0.3, a: 1}
 --- !u!1 &1764794577
 GameObject:
   m_ObjectHideFlags: 0
@@ -5720,6 +5727,7 @@ MonoBehaviour:
   restoreOnExit: 1
   unlockWASDWhileInside: 1
   playerTag: Player
+  presenceCheckInterval: 0.15
 --- !u!65 &1764794579
 BoxCollider:
   m_ObjectHideFlags: 0

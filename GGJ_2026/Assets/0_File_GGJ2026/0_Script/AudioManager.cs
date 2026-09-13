@@ -2,9 +2,10 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 正式关卡（Level1~Level5）的统一音频管理：
-///  · 每个正式关卡可以在“关卡配乐表”（sceneAudioProfiles，每关一行）里配自己的
+/// 正式关卡（Begin_Menu / Level1~Level5）的统一音频管理：
+///  · 每个场景可以在“关卡配乐表”（sceneAudioProfiles，每关一行）里配自己的
 ///    主背景音乐 + 环境音（以及各自音量）。切场景时按场景名自动查表并淡入淡出切换；
+///    Begin_Menu（开始界面）也在这张表里 —— 加一行且 musicClip 留空即可让标题阶段静音；
 ///  · 表里没写到的场景会回退到默认字段 musicClip / ambienceClip(+ambienceSceneName)；
 ///  · 一次性音效（拾取能量 / Q 消耗 / 交互注入 / 弹跳蘑菇 / 脚步、跳跃、落地）走独立通道，响度最大；
 ///  · 带变体的素材（脚步/跳跃/落地）每次随机抽一个，且避免连续抽到同一条。
@@ -54,6 +55,12 @@ public class AudioManager : MonoBehaviour
         [Range(0f, 1f)]
         [Tooltip("该关环境音音量：要能明显听到氛围声（默认 0.2 左右）")]
         public float ambienceVolume = 0.2f;
+
+        [Header("本关音乐淡入淡出（秒，负数 = 使用 AudioManager 全局值）")]
+        [Tooltip("进入本关时 BGM 淡入时长；0 = 一开口就是目标音量；负数 = 使用全局 musicFadeInSeconds")]
+        public float musicFadeInSeconds = -1f;
+        [Tooltip("离开本关时旧 BGM 淡出时长；负数 = 使用全局 musicFadeSeconds")]
+        public float musicFadeOutSeconds = -1f;
     }
 
     [Header("默认主音乐（关卡配乐表里没写到的场景用）")]
@@ -73,14 +80,18 @@ public class AudioManager : MonoBehaviour
     public string ambienceSceneName = "Level1";
 
     [Header("关卡配乐表（推荐在这统一按关卡配置）")]
-    [Tooltip("每个正式关卡一行：主 BGM + 环境音 + 各自音量。\n" +
+    [Tooltip("每个场景一行（含开始界面 Begin_Menu）：主 BGM + 环境音 + 各自音量 + 可独立的淡入淡出。\n" +
              "进入/切换场景时自动按场景名匹配这一行，做淡入淡出切换；\n" +
-             "表里没匹配到的场景用上面的“默认”字段。")]
+             "表里没匹配到的场景用上面的“默认”字段。\n" +
+             "Begin_Menu 一行的 musicClip 留空 = 开始界面静音；\n" +
+             "把某行的 musicFadeInSeconds 设为 0 即可让该场景 BGM 一开口就是目标音量（标题界面常用）。")]
     public SceneAudioProfile[] sceneAudioProfiles;
 
     [Header("关卡切换淡入淡出（秒）")]
-    [Tooltip("换关卡时主 BGM 淡出 + 淡入的总时长")]
+    [Tooltip("换关卡时主 BGM 淡出（切走旧音乐）的时长；可被每关配乐表里的 musicFadeOutSeconds 覆盖")]
     public float musicFadeSeconds = 1.5f;
+    [Tooltip("换关卡时主 BGM 淡入时长；0 = 不淡入，音乐一开口就是目标音量；可被每关配乐表里的 musicFadeInSeconds 覆盖")]
+    public float musicFadeInSeconds = 1.5f;
     [Tooltip("换关卡时环境音淡出 + 淡入的总时长")]
     public float ambienceFadeSeconds = 1f;
 
@@ -225,6 +236,41 @@ public class AudioManager : MonoBehaviour
         ApplySceneProfile(SceneManager.GetActiveScene().name);
     }
 
+    /// <summary>
+    /// 开始界面（Begin_Menu）/ 标题阶段进入时调用：让标题阶段也走同一张“关卡配乐表”，
+    /// 表里有 Begin_Menu 那一行就用它（留空 musicClip = 标题无音乐）。
+    /// </summary>
+    /// <returns>true = 已由 AudioManager 接管 BGM，调用方不要再用自己的旧音乐源播放，避免双份；<br/>
+    /// false = 标题音乐没配（或表里显式留空），调用方可回退到自己的标题音乐。</returns>
+    public static bool BeginTitleAudio()
+    {
+        EnsureCreated();
+        return Instance != null && Instance.StartTitleAudio();
+    }
+
+    private bool StartTitleAudio()
+    {
+        CreateAudioSources();
+
+        string sceneName = SceneManager.GetActiveScene().name;
+        SceneAudioProfile profile = FindProfile(sceneName);
+
+        // 表里配了 Begin_Menu 这一行就听它的（音乐留空 = 明确要求标题静音 → 不接管）；
+        // 没配这一行则看默认字段。
+        AudioClip introClip = profile != null ? profile.musicClip : musicClip;
+        if (introClip == null)
+            return false;
+
+        if (!levelAudioStarted)
+        {
+            levelAudioStarted = true;
+            StopLegacyTitleMusic();
+        }
+
+        ApplySceneProfile(sceneName);
+        return true;
+    }
+
     // ---------------------------------------------------------------- 关卡配乐表
 
     /// <summary>按场景名应用配乐：优先查表，查不到回退默认字段。</summary>
@@ -234,12 +280,14 @@ public class AudioManager : MonoBehaviour
 
         if (profile != null)
         {
-            SetMusic(profile.musicClip, profile.musicVolume);
+            float fadeOut = profile.musicFadeOutSeconds >= 0f ? profile.musicFadeOutSeconds : musicFadeSeconds;
+            float fadeIn = profile.musicFadeInSeconds >= 0f ? profile.musicFadeInSeconds : musicFadeInSeconds;
+            SetMusic(profile.musicClip, profile.musicVolume, fadeOut, fadeIn);
             SetAmbience(profile.ambienceClip, profile.ambienceVolume);
         }
         else
         {
-            SetMusic(musicClip, musicVolume);
+            SetMusic(musicClip, musicVolume, musicFadeSeconds, musicFadeInSeconds);
             bool allowDefaultAmbience = sceneName == ambienceSceneName;
             SetAmbience(allowDefaultAmbience ? ambienceClip : null, ambienceVolume);
         }
@@ -262,14 +310,14 @@ public class AudioManager : MonoBehaviour
     /// 平滑切到某条主音乐：旧音乐先淡出，再淡入新音乐。
     /// 目标是当前正播的同一条时只校正音量，不打断重播。
     /// </summary>
-    private void SetMusic(AudioClip clip, float targetVolume)
+    private void SetMusic(AudioClip clip, float targetVolume, float fadeOutSeconds, float fadeInSeconds)
     {
         CreateAudioSources();
 
         if (musicFadeRoutine != null)
             StopCoroutine(musicFadeRoutine);
 
-        musicFadeRoutine = StartCoroutine(SwitchSourceRoutine(musicSource, clip, targetVolume, musicFadeSeconds, true, () => musicFadeRoutine = null));
+        musicFadeRoutine = StartCoroutine(SwitchSourceRoutine(musicSource, clip, targetVolume, fadeOutSeconds, fadeInSeconds, true, () => musicFadeRoutine = null));
     }
 
     /// <summary>平滑切到某条环境音；clip 为 null 表示该关不需要环境音（淡出并停掉）。</summary>
@@ -280,24 +328,27 @@ public class AudioManager : MonoBehaviour
         if (ambienceFadeRoutine != null)
             StopCoroutine(ambienceFadeRoutine);
 
-        ambienceFadeRoutine = StartCoroutine(SwitchSourceRoutine(ambienceSource, clip, targetVolume, ambienceFadeSeconds, true, () => ambienceFadeRoutine = null));
+        float ambienceHalf = ambienceFadeSeconds * 0.5f;
+        ambienceFadeRoutine = StartCoroutine(SwitchSourceRoutine(ambienceSource, clip, targetVolume, ambienceHalf, ambienceHalf, true, () => ambienceFadeRoutine = null));
     }
 
+    /// <summary>
+    /// 切换一个音源上的素材：旧素材按 fadeOutSeconds 淡出，新素材按 fadeInSeconds 淡入。
+    /// fadeInSeconds ≤ 0 表示不淡入 —— 一开口就直接是目标音量（标题 Begin_Menu 用的就是这个）。
+    /// </summary>
     private System.Collections.IEnumerator SwitchSourceRoutine(
-        AudioSource source, AudioClip clip, float targetVolume, float totalSeconds,
+        AudioSource source, AudioClip clip, float targetVolume, float fadeOutSeconds, float fadeInSeconds,
         bool loop, System.Action onDone)
     {
-        float half = Mathf.Max(0.001f, totalSeconds * 0.5f);
-
         // 1) 旧素材淡出（目标换成别条时才需要；同一条则直接续播）
         if (source.clip != null && source.isPlaying && source.clip != clip)
         {
-            yield return FadeToVolume(source, 0f, half);
+            yield return FadeToVolume(source, 0f, Mathf.Max(0.001f, fadeOutSeconds));
             source.Stop();
             source.clip = null;
         }
 
-        // 2) 换上新素材并淡入
+        // 2) 换上新素材并淡入（fadeInSeconds ≤ 0 时直接到目标音量，不做淡入）
         if (clip != null)
         {
             if (source.clip != clip)
@@ -312,7 +363,10 @@ public class AudioManager : MonoBehaviour
                 source.Play();
             }
 
-            yield return FadeToVolume(source, targetVolume, half);
+            if (fadeInSeconds > 0f)
+                yield return FadeToVolume(source, targetVolume, fadeInSeconds);
+            else
+                source.volume = targetVolume;
         }
 
         onDone?.Invoke();
