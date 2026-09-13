@@ -277,6 +277,12 @@ public class LevelSceneRunner : MonoBehaviour
 
         // 黑幕期间屏蔽相机触发区，避免加载/传送瞬间镜头被额外切换
         CameraTriggerVolume.SuppressCameraSwitching = true;
+
+        // 同样屏蔽文字提示区：新场景加载完成到“被摆到出生点”之间有若干帧，玩家位置仍停留在
+        // 上一关的出口处；若新场景里正好有提示区压在那一带（两个关卡坐标范围重叠时很常见），
+        // 会在这一刻被误触发 —— 表现出来就是“刚进关卡就冒出关卡后段的旁白”。
+        MessageTriggerZone.SuppressMessages = true;
+
         yield return hud.FadeToBlackRoutine(fadeToBlackSeconds);
 
         // —— 3. 跨场景保留玩家 / 相机 / 黑幕 ——
@@ -331,6 +337,9 @@ public class LevelSceneRunner : MonoBehaviour
         // 黑幕淡出时玩家看到的就是正确镜头，不需要等淡出完再切。
         CameraTriggerVolume.SuppressCameraSwitching = false;
         CameraTriggerVolume.ReevaluateAll();
+
+        // 玩家已经站到出生点上了，恢复提示区判定
+        MessageTriggerZone.SuppressMessages = false;
 
         // —— 8. 全黑：可选的提示文字 + 停留 ——
         if (!string.IsNullOrEmpty(messageText))
@@ -538,6 +547,7 @@ public class LevelSceneRunner : MonoBehaviour
         {
             needCleanupOnDestroy = false;
             CameraTriggerVolume.SuppressCameraSwitching = false;
+            MessageTriggerZone.SuppressMessages = false;
             RestorePlayerInput();
             LevelTransitionZone.ReleaseTransitionLock();
             Destroy(gameObject);
@@ -551,6 +561,7 @@ public class LevelSceneRunner : MonoBehaviour
         {
             needCleanupOnDestroy = false;
             CameraTriggerVolume.SuppressCameraSwitching = false;
+            MessageTriggerZone.SuppressMessages = false;
             RestorePlayerInput();
             LevelTransitionZone.ReleaseTransitionLock();
         }

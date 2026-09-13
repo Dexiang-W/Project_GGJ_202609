@@ -104,3 +104,29 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# ------------------------------------------------------------------
+# Houdini 源文件与模拟缓存
+# 只提交导出的 Unity 运行资产（*.fbx / 贴图 / 材质），
+# 不提交 Houdini 工程源文件和大体积模拟缓存。
+# ------------------------------------------------------------------
+
+# Houdini 工程源文件（*.hip / *.hipnc / *.hiplc）
+*.hip
+*.hipnc
+*.hiplc
+
+# Houdini 源文件的备份 / 自动保存
+*.hip.bak
+*.hip.autosave
+*.hip~*
+
+# 刚体 / 模拟缓存（体积很大，可由 *.hip 重新生成）
+*.fpc/
+*.fpc
+*.mc
+*.sim/
+*.bgeo
+*.bgeo.gz
+*.bgeo.sc
+*.bgeo.sc.gz

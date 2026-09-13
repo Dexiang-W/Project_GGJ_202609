@@ -41,6 +41,16 @@ public class MessageTriggerZone : MonoBehaviour
     /// <summary>当前“拥有”屏幕提示文字的触发区，避免 A 区离场时把 B 区刚显示的文字关掉。</summary>
     private static MessageTriggerZone activeOwner;
 
+    /// <summary>
+    /// 转场期间屏蔽所有提示区（默认 false）。
+    ///
+    /// 为什么需要：跨场景转场时，玩家是在【新场景加载完成之后】才被摆到出生点的。
+    /// 在这之前的几帧里，玩家的物理位置还停在上一关的出口处；而两个关卡的坐标范围往往是重叠的，
+    /// 于是新场景里正好压在那一带的提示区会在这一刻被误触发 —— 表现为“刚进关卡就冒出后面才该出现的旁白”。
+    /// 由 LevelSceneRunner 在加载场景前打开、传送完成后关闭（和 CameraTriggerVolume.SuppressCameraSwitching 同一套路）。
+    /// </summary>
+    public static bool SuppressMessages { get; set; }
+
     private Coroutine routine;
     private int insideCount;
     private bool used;
@@ -50,6 +60,10 @@ public class MessageTriggerZone : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (!other.CompareTag(playerTag))
+            return;
+
+        // 转场中（玩家还在上一关的位置）不判定，避免“刚进关卡就弹出关卡后段的旁白”
+        if (SuppressMessages)
             return;
 
         // 角色身上可能有多个 Collider，只把“真正第一次进入”算作一次触发
@@ -63,6 +77,9 @@ public class MessageTriggerZone : MonoBehaviour
     private void OnTriggerExit(Collider other)
     {
         if (!other.CompareTag(playerTag))
+            return;
+
+        if (SuppressMessages)
             return;
 
         insideCount = Mathf.Max(0, insideCount - 1);
