@@ -151929,8 +151929,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 569e3f476367a53448dc8f8cfd0b866a, type: 3}
-<<<<<<< Updated upstream
-=======
 --- !u!1 &1403268802
 GameObject:
   m_ObjectHideFlags: 0
@@ -152284,7 +152282,6 @@ MonoBehaviour:
   m_SelectedFaces: 
   m_SelectedEdges: []
   m_SelectedVertices: 
->>>>>>> Stashed changes
 --- !u!1001 &1411374964
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -152649,19 +152646,13 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a096f957f3599914f8d9ff093582ebe8, type: 3}
-<<<<<<< Updated upstream
 --- !u!21 &1460392243
 Material:
   serializedVersion: 8
-=======
---- !u!43 &1458079915
-Mesh:
->>>>>>> Stashed changes
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-<<<<<<< Updated upstream
   m_Name: SandStorm_ParticleMat
   m_Shader: {fileID: 4800000, guid: 13671c380631170409759d59808921dd, type: 3}
   m_Parent: {fileID: 0}
@@ -152688,7 +152679,12 @@ Mesh:
     m_Colors:
     - _Tint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
-=======
+--- !u!43 &1458079915
+Mesh:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
   m_Name: pb_Mesh-145094(Clone)(Clone)(Clone)(Clone)(Clone)(Clone)
   serializedVersion: 11
   m_SubMeshes:
@@ -152848,7 +152844,6 @@ Mesh:
     offset: 0
     size: 0
     path: 
->>>>>>> Stashed changes
 --- !u!1001 &1462235582
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -153786,11 +153781,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-<<<<<<< Updated upstream
   - {fileID: 1460392243}
-=======
-  - {fileID: 1270245042}
->>>>>>> Stashed changes
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
