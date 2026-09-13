@@ -11,17 +11,29 @@ using UnityEngine.InputSystem;
 /// 关卡“R 键回到安全点”系统（随 GameplayHUD 一起自动常驻，任意关卡都可用，无需给场景配脚本）。
 ///
 /// 规则：
-///   · 每进一关，自动记录一次“本关开局快照”（世界 + 出生点 + 当前能量）。
+///   · 每进一关，自动记录一次“本关开局快照”（世界 + 出生点）。
 ///   · 场景里摆 GGJSafePoint 触发区域后，玩家一进区域就自动刷新为“最近安全点快照”。
-///   · 正式游玩中按 R：瞬间把本关世界还原成最近一次快照（植物的生长状态/能量拾取物/机关动画等），
-///     玩家瞬移回安全点、能量与耐力按快照恢复——整段还原在 1 秒内完成（纯内存操作，不重新加载场景）。
+///   · 正式游玩中按 R：瞬间把本关世界还原成最近一次快照（植物的生长状态/机关动画等；
+///     能量球与能量另见下方规则），玩家瞬移回安全点、耐力回满
+///     ——整段还原在 1 秒内完成（纯内存操作，不重新加载场景）。
 ///
 /// 快照内容（这些就是关卡里会被玩家改动的状态）：
-///   · 所有物体的激活状态（能量拾取物被吃掉 = SetActive(false)，还原时会重新出现）；
+///   · 所有物体的激活状态（能量拾取物被吃掉 = SetActive(false)，按“能量球规则”处理）；
 ///   · 场景所有 Animator 的播放状态（P_LongVine 这类植物/机关生长动画都走 Animator，按 E 触发）；
 ///   · InteractableObject 的“已使用”状态；
-///   · 玩家位置 / 重力朝向 / 当前能量 / 耐力。
+///   · 玩家位置 / 重力朝向。
 /// 玩家本体、主相机、HUD/音频等常驻对象不在快照范围内。
+///
+/// 能量球（EnergyPickup）规则 —— “吸收”算永久进度，不随回溯回滚：
+///   · 已经被玩家吸收、且没开“重新生成”的能量球，按 R 后【不会重新生成】（保持消失）；
+///   · 还没被吸收的能量球保持原样（照旧留在原地等玩家去捡）；
+///   · 开了“重新生成”的能量球（EnergyPickup.respawnAfterPickup）：出现/消失完全由它自己的计时决定，
+///     按 R 不干预它 —— 否则“快照恰好拍在它消失的那几秒里”会把已经长回来的球又按回消失状态。
+///
+/// 能量规则 —— 能量不随回溯回滚：
+///   · 按 R 后玩家身上的能量维持“按 R 之前”的数值（不用快照能量覆盖，快照里也不记录能量）；
+///   · 回溯期间吸收掉的球带来的能量归玩家，但球不会再生，
+///     所以玩家需要自己去把剩下的（还没吸收的）能量球找回来。
 /// </summary>
 [DisallowMultipleComponent]
 public class GGJLevelResetManager : MonoBehaviour
@@ -176,8 +188,7 @@ public class GGJLevelResetManager : MonoBehaviour
         {
             sceneName = sceneName,
             safePosition = safePoint.GetRespawnPosition(),
-            gravityInverted = player.InvertGravity,
-            energy = GameplayHUD.Instance.CurrentEnergy
+            gravityInverted = player.InvertGravity
         };
         CaptureWorldState(checkpoint);
         return true;
@@ -197,8 +208,7 @@ public class GGJLevelResetManager : MonoBehaviour
         {
             sceneName = sceneName,
             safePosition = safePos,
-            gravityInverted = player != null && player.InvertGravity,
-            energy = GameplayHUD.Instance != null ? GameplayHUD.Instance.CurrentEnergy : 0
+            gravityInverted = player != null && player.InvertGravity
         };
         CaptureWorldState(snap);
         return snap;
@@ -250,9 +260,10 @@ public class GGJLevelResetManager : MonoBehaviour
                 cam.SnapToCurrentTarget();
             }
 
-            // 解除屏蔽：安全点若恰好位于某个相机触发区内，触发区会在下一帧巡检时
+            // 解除屏蔽：安全点若恰好位于某个相机触发区内，立刻让触发区重新判定一次，
             // 重新应用并立刻就位到该区域的机位（固定视角 / 拉远），而不是一直停在普通跟拍。
             CameraTriggerVolume.SuppressCameraSwitching = false;
+            CameraTriggerVolume.ReevaluateAll();
         }
         finally
         {
@@ -260,12 +271,12 @@ public class GGJLevelResetManager : MonoBehaviour
             restoring = false;
         }
 
-        // 4) 能量还原到快照时刻（期间若 HUD 已被销毁（回标题等），直接结束）
+        // 4) 能量不做任何处理：按 R 只还原“世界”，玩家身上的能量维持按 R 之前的状态
+        //    （所以回溯后要靠玩家自己去找还没被吸收的能量球来补能量；见类头“能量规则”）
         if (!GameplayHUD.Exists)
             yield break;
 
         GameplayHUD hud = GameplayHUD.Instance;
-        hud.SetEnergy(snap.energy);
 
         // 5) 可选提示
         if (!string.IsNullOrEmpty(resetMessageText))
@@ -274,12 +285,20 @@ public class GGJLevelResetManager : MonoBehaviour
 
     private void RestoreWorldState(CheckpointSnapshot snap)
     {
+        // 这些能量球（含子物体）不参与“激活状态还原”：
+        //   · 已被吸收、且不会自己重新生成 → 保持消失；
+        //   · 开了“重新生成”的 → 由它自己的计时决定何时出现，R 不干预。
+        HashSet<GameObject> untouchedPickupRoots = CollectUntouchedPickupRoots(snap);
+
         // ① 激活状态（父先子后的顺序 SetActive，不会受父子关系影响）
         List<NodeState> nodes = snap.nodes;
         for (int i = 0; i < nodes.Count; i++)
         {
             NodeState n = nodes[i];
             if (n == null || n.gameObject == null)
+                continue;
+            // 能量球：已吸收的保持消失、可再生的交给它自己计时 —— 都不还原
+            if (IsUnderAny(n.gameObject.transform, untouchedPickupRoots))
                 continue;
             if (n.gameObject.activeSelf != n.wasActive)
                 n.gameObject.SetActive(n.wasActive);
@@ -355,6 +374,48 @@ public class GGJLevelResetManager : MonoBehaviour
         animator.enabled = s.wasEnabled;
     }
 
+    // ---------------------------------------------------------------- 能量球（能量拾取物）
+
+    /// <summary>
+    /// 本关“按 R 时不还原激活状态”的能量球根节点：
+    ///   · 已经被玩家吸收、且不会自己重新生成的球 —— 吸收算永久进度，按 R 后保持消失（不把它“叼”回来）；
+    ///   · 开了“重新生成”的球（EnergyPickup.CanRespawn）—— 出现/消失完全由它自己的计时决定，
+    ///     这里一并跳过：否则快照恰好拍在它消失的那几秒里时，会把已经长回来的球又按回消失状态、再也回不来。
+    /// </summary>
+    private static HashSet<GameObject> CollectUntouchedPickupRoots(CheckpointSnapshot snap)
+    {
+        HashSet<GameObject> roots = null;
+        List<EnergyPickup> pickups = snap.pickups;
+        for (int i = 0; i < pickups.Count; i++)
+        {
+            EnergyPickup pickup = pickups[i];
+            if (pickup == null)
+                continue;
+            if (!pickup.IsCollected && !pickup.CanRespawn)
+                continue;
+
+            if (roots == null)
+                roots = new HashSet<GameObject>();
+            roots.Add(pickup.gameObject);
+        }
+        return roots;
+    }
+
+    /// <summary>节点自己或任意父级是否属于“已吸收的能量球”（整棵子树都不参与还原）。</summary>
+    private static bool IsUnderAny(Transform t, HashSet<GameObject> roots)
+    {
+        if (roots == null || roots.Count == 0)
+            return false;
+
+        while (t != null)
+        {
+            if (roots.Contains(t.gameObject))
+                return true;
+            t = t.parent;
+        }
+        return false;
+    }
+
     // ---------------------------------------------------------------- 世界快照采集
 
     private void CaptureWorldState(CheckpointSnapshot snap)
@@ -362,6 +423,7 @@ public class GGJLevelResetManager : MonoBehaviour
         snap.nodes.Clear();
         snap.animators.Clear();
         snap.interactables.Clear();
+        snap.pickups.Clear();
 
         Scene scene = SceneManager.GetActiveScene();
         foreach (GameObject root in scene.GetRootGameObjects())
@@ -382,6 +444,19 @@ public class GGJLevelResetManager : MonoBehaviour
             if (root != null && IsSkippedRoot(root.gameObject))
                 continue;
             snap.interactables.Add(new InteractableState { target = io, wasConsumed = io.IsConsumed });
+        }
+
+        // 能量球（能量拾取物）单独采集：还原时用来识别“已经被玩家吸收的球”（它们不再生成）
+        EnergyPickup[] pickups = FindObjectsOfType<EnergyPickup>(true);
+        for (int i = 0; i < pickups.Length; i++)
+        {
+            EnergyPickup pickup = pickups[i];
+            if (pickup == null)
+                continue;
+            Transform root = pickup.transform.root;
+            if (root != null && IsSkippedRoot(root.gameObject))
+                continue;
+            snap.pickups.Add(pickup);
         }
     }
 
@@ -607,11 +682,13 @@ public class GGJLevelResetManager : MonoBehaviour
         public string sceneName;
         public Vector3 safePosition;
         public bool gravityInverted;
-        public int energy;
 
         public readonly List<NodeState> nodes = new List<NodeState>();
         public readonly List<AnimatorState> animators = new List<AnimatorState>();
         public readonly List<InteractableState> interactables = new List<InteractableState>();
+
+        /// <summary>本关所有能量球（用于还原时跳过“已被吸收”的那几颗）。</summary>
+        public readonly List<EnergyPickup> pickups = new List<EnergyPickup>();
     }
 
     private class NodeState

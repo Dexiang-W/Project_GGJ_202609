@@ -86,6 +86,14 @@ public class CameraTriggerVolume : MonoBehaviour
             return;
         }
 
+        // 玩家在区域内，但机位已被重生 / 按 R 回溯等流程强制切走 → 当帧就补回来，不等巡检
+        if (!SuppressCameraSwitching && cameraInside && NeedReapplyCameraMode())
+        {
+            presenceTimer = presenceCheckInterval;
+            RefreshCameraPresence();
+            return;
+        }
+
         presenceTimer -= Time.deltaTime;
         if (presenceTimer > 0f)
             return;
@@ -139,35 +147,48 @@ public class CameraTriggerVolume : MonoBehaviour
 
     /// <summary>
     /// 按“玩家此刻是否真的在区域内”来决定相机，而不是依赖 OnTriggerEnter / OnTriggerExit 事件。
-    /// 关键作用：重生 / 转场是把玩家“放”进区域的 —— 既不会产生 Enter 事件，期间还被
-    /// SuppressCameraSwitching 屏蔽，只靠事件会让相机一直停在普通跟拍；这里每帧巡检即可自动纠正。
+    /// 关键作用：
+    ///   · 重生 / 转场是把玩家“放”进区域的 —— 既不会产生 Enter 事件，期间还被
+    ///     SuppressCameraSwitching 屏蔽，只靠事件会让相机一直停在普通跟拍；
+    ///   · 重生 / 按 R 回溯会强制把相机切回普通跟拍（哪怕玩家一直站在本区域内、本区域的
+    ///     机位此前已经应用过），所以“在区域内”时还要确认机位没被切回普通跟拍，被切走就补应用。
     /// </summary>
     private void RefreshCameraPresence()
     {
         bool inside = IsPlayerInsideVolume();
 
-        if (inside != cameraInside)
+        if (inside && !cameraInside)
         {
-            cameraInside = inside;
+            // ① 刚进入区域：机位需要重新应用
+            cameraInside = true;
             cameraApplied = false;
         }
-
-        if (!inside)
+        else if (!inside)
         {
+            // ② 玩家在区域外：统一在这里收尾 —— 不管是“离开事件”先把 cameraInside 置了 false，
+            //    还是巡检先发现人已出去，只要本区域此前应用过机位，就恢复普通跟拍并清标记。
+            //    （旧写法把“清 cameraApplied”放在判断之前，巡检先发现的那次就漏掉恢复，
+            //      表现为“走出某个固定机位区域后镜头一直锁着”。）
+            cameraInside = false;
             pendingSnapApply = false;
 
-            if (restoreOnExit && cameraApplied)
+            if (cameraApplied)
             {
                 cameraApplied = false;
-                SetNormalCamera();
+                if (restoreOnExit)
+                    SetNormalCamera();
             }
             return;
         }
 
-        if (cameraApplied)
+        // ③ 在区域内、机位已就位、且没被重生 / R 回溯等外部流程切走 → 无事可做
+        if (!NeedReapplyCameraMode())
+        {
+            pendingSnapApply = false;
             return;
+        }
 
-        // 重生 / 转场流程中：先记下，等屏蔽解除后再补应用
+        // ④ 重生 / 转场流程中：先记下，等屏蔽解除后再补应用
         if (SuppressCameraSwitching)
         {
             pendingSnapApply = true;
@@ -178,6 +199,49 @@ public class CameraTriggerVolume : MonoBehaviour
         pendingSnapApply = false;
         if (ApplyCameraMode(snap))
             cameraApplied = true;
+    }
+
+    /// <summary>
+    /// 本区域的机位是否需要（补）应用：
+    ///   · 从没应用过 —— 例如被重生 / 转场“放”进区域时不会有 Enter 事件；
+    ///   · 已经应用过，但相机被重生 / 按 R 回溯这类流程强制切回了普通跟拍
+    ///     （它们直接调 SetNormalMode，并不知道玩家正站在某个触发区里）。
+    /// 只在“相机当前是普通跟拍、而本区域要的不是普通跟拍”时才算被抢走：
+    /// 相机若正被出生镜头 / 其它镜头逻辑占用（固定点 / 拉远），不去抢回来，避免两套镜头逻辑打架。
+    /// </summary>
+    private bool NeedReapplyCameraMode()
+    {
+        if (!cameraApplied)
+            return true;
+
+        if (modeOnEnter == TriggerMode.Normal)
+            return false;
+
+        ResolveCameraController();
+        if (cameraController == null)
+            return true;
+
+        return cameraController.GetCurrentMode() == CameraFollowController.CameraMode.Normal;
+    }
+
+    /// <summary>
+    /// 重生 / 转场 / 按 R 回溯这类“把玩家放进去”的流程，在解除 SuppressCameraSwitching 之后调用：
+    /// 立刻让所有触发区重新判定一次，保证落点所在区域当帧就把机位补上（并且直接就位，不慢慢滑过去），
+    /// 不用等下一次巡检（也兼顾把巡检关掉的区域）。
+    /// </summary>
+    public static void ReevaluateAll()
+    {
+        CameraTriggerVolume[] volumes = FindObjectsOfType<CameraTriggerVolume>(true);
+        for (int i = 0; i < volumes.Length; i++)
+        {
+            CameraTriggerVolume volume = volumes[i];
+            if (volume == null || !volume.isActiveAndEnabled)
+                continue;
+
+            volume.pendingSnapApply = true;
+            volume.presenceTimer = volume.presenceCheckInterval;
+            volume.RefreshCameraPresence();
+        }
     }
 
     /// <summary>主动检测玩家是否在区域内（用碰撞体包围盒判定）。</summary>

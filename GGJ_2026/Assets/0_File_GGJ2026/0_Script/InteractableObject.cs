@@ -25,6 +25,9 @@ using UnityEngine.InputSystem;
 ///     Plant Animators 里登记的植物动画退回“未长成”初始状态（默认状态名 None），可反复 E/Q。
 ///   · 编辑器菜单“GGJ2026/能量植物 → 把选中物体升级为…能量球”可自动开启该模式并填入植物 Animator。
 ///
+/// 提示文字配置：能量不足时弹出的文字来自全局文本配置
+///   （Assets/0_File_GGJ2026/Resources/GGJTextConfig.asset），在 Project 窗口双击即可编辑，不需要改代码。
+///
 /// 描边实现：运行时给物体上每个网格各加一个“背面挤出”的描边壳（GGJ2026/OutlineShell Shader）。
 /// 子物体上的网格也会被描边，因此像 P_LongVine 这种“根节点没有网格、网格都在子物体上”的物体也能正常高亮。
 /// </summary>
@@ -345,22 +348,27 @@ public class InteractableObject : MonoBehaviour
     /// <summary>能量植物模式：E 时消耗的能量格数（供 UI/编辑器提示使用）。</summary>
     public int ChargeEnergyCost => chargeEnergyCost;
 
+    /// <summary>
+    /// 能量不足提示：文字与停留时长都来自全局文本配置（Resources/GGJTextConfig.asset），
+    /// 改文字不用动代码；配置资源缺失时自动回退到内置默认文案。
+    /// </summary>
     private void ShowInsufficientEnergyHint()
     {
+        GameplayHUD.EnsureCreated();
         GameplayHUD hud = GameplayHUD.Instance;
         if (hud == null)
             return;
 
-        hud.ShowMessage("能量不足，先去找能量球收集能量！");
+        hud.ShowMessage(GGJTextConfig.GetInsufficientEnergyHint());
 
         if (hintRoutine != null)
             StopCoroutine(hintRoutine);
-        hintRoutine = StartCoroutine(HideHintRoutine(hud));
+        hintRoutine = StartCoroutine(HideHintRoutine(hud, GGJTextConfig.GetInsufficientEnergyHintSeconds()));
     }
 
-    private IEnumerator HideHintRoutine(GameplayHUD hud)
+    private IEnumerator HideHintRoutine(GameplayHUD hud, float staySeconds)
     {
-        yield return new WaitForSecondsRealtime(1.2f);
+        yield return new WaitForSecondsRealtime(staySeconds);
         if (hud != null)
             hud.HideMessage();
         hintRoutine = null;
