@@ -254,31 +254,97 @@ namespace StarterAssets
         /// <summary>
         /// 回到安全点/出生点：瞬移到指定点并清空速度、自由移动计数等运动残留
         /// （GGJLevelResetManager 按 R 重置时使用；重力按安全点记录状态恢复）。
+        /// 朝向沿用当前朝向的水平分量（瞬移后一定站直）。
         /// </summary>
         public void PlaceAtSafePoint(Vector3 worldPosition, bool gravityInvertedAfter)
         {
             if (InvertGravity != gravityInvertedAfter)
             {
                 InvertGravity = gravityInvertedAfter;
-                _wasGravityInverted = gravityInvertedAfter;
-                ApplyInversionVisuals();
+                ApplyGravityInversion(transform.eulerAngles.y);
             }
+
+            TeleportAndStand(worldPosition, transform.eulerAngles.y);
+        }
+
+        /// <summary>
+        /// 复活：瞬移到指定点并把角色摆成竖直站立的姿势（ RespawnZone / PipelineHazard 用）。
+        /// </summary>
+        /// <param name="worldPosition">落点（角色的脚底位置）。</param>
+        /// <param name="yaw">复活后的水平朝向（世界 Y 轴角度，单位：度）。</param>
+        public void RespawnAt(Vector3 worldPosition, float yaw)
+        {
+            TeleportAndStand(worldPosition, yaw);
+        }
+
+        /// <summary>
+        /// 瞬移 + 站直 + 清空一切运动残留。
+        /// 角色每帧的实际朝向都写成 Euler(0, yaw, roll)（见 Move / ApplyInversionVisuals），
+        /// 这里在传送的同一时刻用同样的写法设一次，顺手清掉死亡瞬间可能留下的
+        /// 俯仰 / 翻滚 / 转向速度 / 输入残留，避免复活后歪着、躺着或带着惯性滑走。
+        /// </summary>
+        private void TeleportAndStand(Vector3 worldPosition, float yaw)
+        {
+            if (_controller == null)
+                _controller = GetComponent<CharacterController>();
+
+            if (_input == null)
+                _input = GetComponent<StarterAssetsInputs>();
+
+            if (!_hasAnimator)
+                _hasAnimator = TryGetComponent(out _animator);
+
+            float characterRoll = InvertGravity ? 180.0f : 0.0f;
 
             if (_controller != null)
                 _controller.enabled = false;
 
             transform.position = worldPosition;
-            _verticalVelocity = 0f;
-            _fallTimeoutDelta = FallTimeout;
-            _jumpTimeoutDelta = 0f; // 允许回到安全点后立即起跳
-            freeMoveDepth = 0;
-            _speed = 0f;
-            _animationBlend = 0f;
+            transform.rotation = Quaternion.Euler(0.0f, yaw, characterRoll);
 
             if (_controller != null)
                 _controller.enabled = true;
 
+            // 运动 / 计时残留
+            _verticalVelocity = 0f;
+            _fallTimeoutDelta = FallTimeout;
+            _jumpTimeoutDelta = 0f; // 允许复活后立即起跳
+            freeMoveDepth = 0;
+            _speed = 0f;
+            _animationBlend = 0f;
+            _rotationVelocity = 0f;
+
+            // 输入残留（死亡瞬间按住的方向 / 冲刺 / 跳跃键）
+            if (_input != null)
+            {
+                _input.move = Vector2.zero;
+                _input.jump = false;
+                _input.sprint = false;
+            }
+
+            // 动画残留（复活后直接回到站立 idle，不会停在坠落 / 跳跃姿势上）
+            if (_hasAnimator)
+            {
+                _animator.SetFloat(_animIDSpeed, 0f);
+                _animator.SetFloat(_animIDMotionSpeed, 1f);
+                _animator.SetBool(_animIDJump, false);
+                _animator.SetBool(_animIDFreeFall, false);
+                GroundedCheck();
+            }
+
+            // 模型 / 相机目标的 roll 也对齐到当前重力（与 Update 里的反转处理同一套）
+            _wasGravityInverted = InvertGravity;
+            ApplyInversionVisuals();
+
             RestoreFullStamina();
+        }
+
+        /// <summary>切换重力并把朝向、模型、相机目标一次性摆正。</summary>
+        private void ApplyGravityInversion(float yaw)
+        {
+            _wasGravityInverted = InvertGravity;
+            transform.rotation = Quaternion.Euler(0.0f, yaw, InvertGravity ? 180.0f : 0.0f);
+            ApplyInversionVisuals();
         }
 
         private void AssignAnimationIDs()
