@@ -51,6 +51,9 @@ public class MessageTriggerZone : MonoBehaviour
     /// </summary>
     public static bool SuppressMessages { get; set; }
 
+    /// <summary>是否有进入型提示区正在显示文字（供 DwellMessageZone 等系统避让，避免两条提示互相顶掉）。</summary>
+    public static bool IsMessageActive => activeOwner != null;
+
     private Coroutine routine;
     private int insideCount;
     private bool used;

@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_NPR_EnergyBall
+  m_Shader: {fileID: 4800000, guid: 8f2c41d7a9b34e60bd5c72e1f0a3d9c8, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _VatPosMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AmbientStrength: 0.35
+    - _BlotchHigh: 0.6
+    - _BlotchLow: 0.42
+    - _BlotchScale: 3.2
+    - _BlotchSoftness: 0.12
+    - _BreatheAmp: 0.015
+    - _BreatheSpeed: 1.2
+    - _LightBlotchStrength: 0.65
+    - _MottleStrength: 0.18
+    - _NoiseDriftSpeed: 0.15
+    - _PulseSpeed: 3.63
+    - _PulseStrength: 0.154
+    - _RimPower: 2.05
+    - _RimStrength: 0.5
+    - _SSSPower: 2.5
+    - _SSSStrength: 2
+    - _SpecPower: 28
+    - _SpecStrength: 0.12
+    - _SpecThreshold: 0.206
+    - _StepMid: 0.42
+    - _StepSmooth: 0.16
+    - _VatAutoPlay: 1
+    - _VatEnable: 1
+    - _VatFlipV: 0
+    - _VatFps: 24
+    - _VatFrameEnd: 240
+    - _VatFrameStart: 0
+    - _VatManualFrame: 0
+    - _VatNormalBlend: 1
+    - _VatOffsetScale: 1
+    - _VatPingPong: 0
+    - _VatRowsPerFrame: 4
+    - _VatTexHeight: 1000
+    - _VatTotalFrames: 250
+    - _WobbleAmp: 0.0004
+    - _WobbleEnable: 1
+    - _WobbleFreq: 2.4
+    - _WobbleNormal: 0.7
+    - _WobbleSpeed: 1
+    - _Wrap: 0.35
+    m_Colors:
+    - _BaseColorDark: {r: 0.0722, g: 0.1468, b: 0.0256, a: 1}
+    - _BaseColorLight: {r: 0.2897, g: 0.4175, b: 0.1165, a: 1}
+    - _BaseColorMid: {r: 0.1229, g: 0.2224, b: 0.0434, a: 1}
+    - _HighlightColor: {r: 0.4795, g: 0.5827, b: 0.3515, a: 1}
+    - _RimColor: {r: 0.5, g: 0.6, b: 0.3, a: 1}
+    - _SSSColor: {r: 0.3, g: 0.45, b: 0.15, a: 1}
+    - _ShadowTint: {r: 0.5, g: 0.55, b: 0.45, a: 1}
+  m_BuildTextureStacks: []

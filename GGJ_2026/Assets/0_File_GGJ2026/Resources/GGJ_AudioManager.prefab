@@ -111,6 +111,13 @@ MonoBehaviour:
   - {fileID: 8300000, guid: a37712a28dc569946a2813641851a1f1, type: 3}
   - {fileID: 8300000, guid: a8e1e002fc1eb4b479ec6e4abc636159, type: 3}
   - {fileID: 8300000, guid: 20216e91935810f4bba365a8f1929629, type: 3}
+  floorStepClips:
+  - {fileID: 8300000, guid: 524e5f05976cfed4aaf572c17c2cf8fa, type: 3}
+  - {fileID: 8300000, guid: 66e7d4a35d1d41c4ab288d3a93123929, type: 3}
+  - {fileID: 8300000, guid: e52100f6596f6784280507cc389fb4e5, type: 3}
+  - {fileID: 8300000, guid: 92f850a4ffcf835478db4a5339e1c65d, type: 3}
+  - {fileID: 8300000, guid: e73e921028ce31c428eafc415d2cdefb, type: 3}
+  - {fileID: 8300000, guid: 29d63a6a4b8ed2f44a5d9514a799e9a5, type: 3}
   grassStepClips:
   - {fileID: 8300000, guid: cefa7c97218f295488998d764ed32e8b, type: 3}
   - {fileID: 8300000, guid: 90c82f5288460994284c76524f2f0048, type: 3}
@@ -146,7 +153,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 04688f0ffa3f8424e829cce92582f173, type: 3}
   - {fileID: 8300000, guid: 262ddcee4b79c084ebd04278e1db7c4c, type: 3}
   - {fileID: 8300000, guid: e377c745c6859ee41850ec4d518aedfa, type: 3}
-  sfxVolume: 1
-  footstepBoost: 3
+  sfxVolume: 0.8
+  footstepBoost: 0.25
   jumpBoost: 0.35
   landBoost: 0.9

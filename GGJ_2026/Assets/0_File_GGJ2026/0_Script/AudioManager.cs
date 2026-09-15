@@ -24,10 +24,10 @@ public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance { get; private set; }
 
-    /// <summary>脚踩的地表类型，决定脚步声用哪组素材（默认 Floor = 上面的 footstepClips）。</summary>
+    /// <summary>脚踩的地表类型，决定脚步声用哪组素材（默认 Floor = floorStepClips）。</summary>
     public enum StepSurface
     {
-        Floor,      // 地板/实验室（footstepClips = SFX_Footstep_Lab_x）
+        Floor,      // 地板/实验室（floorStepClips = SFX_Footstep_Lab_x）
         Grass,      // 草地
         Sand,       // 沙地
         Water,      // 水体 / 浅水洼（素材组为 Puddle）
@@ -106,7 +106,7 @@ public class AudioManager : MonoBehaviour
     public AudioClip bounceClip;
 
     [Header("带变体的素材（播放时随机）")]
-    [Tooltip("地板/实验室脚步（默认地表，SFX_Footstep_Lab_1~6）。没识别出地表或地表组没配时就播这组")]
+    [Tooltip("兜底默认脚步（所有地表组包括 Floor 没配素材时回退到这组；默认也是 SFX_Footstep_Lab_1~6）")]
     public AudioClip[] footstepClips;
     [Tooltip("SFX_Player_Jump_1~5（跳跃响度由下方 jumpBoost 单独调）")]
     public AudioClip[] jumpClips;
@@ -114,6 +114,8 @@ public class AudioManager : MonoBehaviour
     public AudioClip[] landClips;
 
     [Header("地表脚步组（不同地表自动换一组；某组没配素材会自动回退到地板组）")]
+    [Tooltip("地板/实验室：SFX_Footstep_Lab_1~6")]
+    public AudioClip[] floorStepClips;
     [Tooltip("草地：SFX_Footstep_Grass_1~6")]
     public AudioClip[] grassStepClips;
     [Tooltip("沙地：SFX_Footstep_Sand_1~6")]
@@ -411,6 +413,7 @@ public class AudioManager : MonoBehaviour
     {
         switch (surface)
         {
+            case StepSurface.Floor:    return HasAny(floorStepClips) ? floorStepClips : footstepClips;
             case StepSurface.Grass:    return HasAny(grassStepClips) ? grassStepClips : footstepClips;
             case StepSurface.Sand:     return HasAny(sandStepClips) ? sandStepClips : footstepClips;
             case StepSurface.Water:    return HasAny(waterStepClips) ? waterStepClips : footstepClips;

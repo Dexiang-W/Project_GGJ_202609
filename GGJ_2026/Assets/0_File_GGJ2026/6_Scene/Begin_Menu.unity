@@ -99083,51 +99083,6 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 3
       objectReference: {fileID: 0}
-    - target: {fileID: 8136972482338599956, guid: f427432c7217d334fb687e48295832ed,
-        type: 3}
-      propertyPath: LandingAudioClip
-      value: 
-      objectReference: {fileID: 8300000, guid: 9b37353ff168daa49afb1a8740ac588d, type: 3}
-    - target: {fileID: 8136972482338599956, guid: f427432c7217d334fb687e48295832ed,
-        type: 3}
-      propertyPath: FootstepAudioVolume
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8136972482338599956, guid: f427432c7217d334fb687e48295832ed,
-        type: 3}
-      propertyPath: FootstepAudioClips.Array.size
-      value: 6
-      objectReference: {fileID: 0}
-    - target: {fileID: 8136972482338599956, guid: f427432c7217d334fb687e48295832ed,
-        type: 3}
-      propertyPath: FootstepAudioClips.Array.data[0]
-      value: 
-      objectReference: {fileID: 8300000, guid: 524e5f05976cfed4aaf572c17c2cf8fa, type: 3}
-    - target: {fileID: 8136972482338599956, guid: f427432c7217d334fb687e48295832ed,
-        type: 3}
-      propertyPath: FootstepAudioClips.Array.data[1]
-      value: 
-      objectReference: {fileID: 8300000, guid: 66e7d4a35d1d41c4ab288d3a93123929, type: 3}
-    - target: {fileID: 8136972482338599956, guid: f427432c7217d334fb687e48295832ed,
-        type: 3}
-      propertyPath: FootstepAudioClips.Array.data[2]
-      value: 
-      objectReference: {fileID: 8300000, guid: e52100f6596f6784280507cc389fb4e5, type: 3}
-    - target: {fileID: 8136972482338599956, guid: f427432c7217d334fb687e48295832ed,
-        type: 3}
-      propertyPath: FootstepAudioClips.Array.data[3]
-      value: 
-      objectReference: {fileID: 8300000, guid: 92f850a4ffcf835478db4a5339e1c65d, type: 3}
-    - target: {fileID: 8136972482338599956, guid: f427432c7217d334fb687e48295832ed,
-        type: 3}
-      propertyPath: FootstepAudioClips.Array.data[4]
-      value: 
-      objectReference: {fileID: 8300000, guid: e73e921028ce31c428eafc415d2cdefb, type: 3}
-    - target: {fileID: 8136972482338599956, guid: f427432c7217d334fb687e48295832ed,
-        type: 3}
-      propertyPath: FootstepAudioClips.Array.data[5]
-      value: 
-      objectReference: {fileID: 8300000, guid: 29d63a6a4b8ed2f44a5d9514a799e9a5, type: 3}
     - target: {fileID: 8136972482338599967, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_Layer

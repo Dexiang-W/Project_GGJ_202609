@@ -132,6 +132,11 @@ namespace StarterAssets
         private StarterAssetsInputs _input;
         private GameObject _mainCamera;
 
+        // 地表“区域体积”检测用的复用缓冲（每走一步查一次，避免频繁分配）
+        private readonly Collider[] _surfaceOverlapBuffer = new Collider[16];
+        // 区域体积检测半径下限（脚底一圈），比 GroundedRadius 稍大一点更容易碰到区域盒子
+        private const float SurfaceVolumeMinRadius = 0.35f;
+
         private const float _threshold = 0.01f;
 
         private bool _hasAnimator;
@@ -590,6 +595,12 @@ namespace StarterAssets
             Gizmos.DrawSphere(
                 transform.position + (GetUpDirection() * GroundedOffset),
                 GroundedRadius);
+
+            // 蓝色球 = 地表“区域体积”检测范围（浅水洼那类 Trigger 区域靠它识别）
+            Gizmos.color = new Color(0.0f, 0.6f, 1.0f, 0.25f);
+            Gizmos.DrawSphere(
+                transform.position + (GetUpDirection() * GroundedOffset),
+                Mathf.Max(GroundedRadius, SurfaceVolumeMinRadius));
         }
 
         private void OnFootstep(AnimationEvent animationEvent)
@@ -603,53 +614,98 @@ namespace StarterAssets
                     var index = Random.Range(0, FootstepAudioClips.Length);
                     AudioSource.PlayClipAtPoint(FootstepAudioClips[index], transform.TransformPoint(_controller.center), FootstepAudioVolume);
                 }
-                else if (AudioManager.Instance != null)
+                else
                 {
-                    AudioManager.Instance.PlayFootstep(DetectStepSurface());
+                    // 标题场景（Begin_Menu）这类没有 GameplayHUD 的地方，AudioManager 可能还没被创建，
+                    // 这里兜底建一个（已存在时 EnsureCreated 直接返回，不会重复建）。
+                    AudioManager.EnsureCreated();
+
+                    if (AudioManager.Instance != null)
+                        AudioManager.Instance.PlayFootstep(DetectStepSurface());
                 }
             }
         }
 
         /// <summary>
         /// 检测脚底当前踩的地表类型（每走一步调用一次）。
-        /// 先找 GGJStepSurfaceMarker 组件（挂在碰撞体或它父物体上）；
-        /// 没有就按地面物体名 / 物理材质名里的关键字兜底识别；都识别不出返回 Floor。
+        ///
+        /// 地表 100% 由 GGJStepSurfaceMarker 决定，不做任何“按物体名 / 材质名猜”的事：
+        ///  1. 脚边球范围碰到的 Trigger 体积（或它的父物体）上有标记 → 用它（重叠多个取最小的）；
+        ///  2. 否则脚下射线命中的实体地面（或它的父物体）上有标记 → 用它；
+        ///  3. 没挂标记的地方 → 默认 Floor（SFX_Footstep_Lab）。
+        ///
+        /// 顺序说明：区域体积排在实体地面之前。整块 Terrain 那种大面积地面标记是笼统兜底，
+        /// 而水域区域是局部、明确的声明 —— 否则水洼下方的 Terrain 一标成 Grass，水洼就永远盖不过它。
         /// </summary>
         private AudioManager.StepSurface DetectStepSurface()
         {
             Vector3 upDirection = GetUpDirection();
             Vector3 origin = transform.position + (upDirection * GroundedOffset);
 
-            if (Physics.SphereCast(origin, GroundedRadius, -upDirection, out RaycastHit hit,
-                    0.5f, GroundLayers, QueryTriggerInteraction.Ignore))
-            {
-                // 1) 碰撞体 / 父物体上的显式标记优先
-                GGJStepSurfaceMarker marker = hit.collider.GetComponentInParent<GGJStepSurfaceMarker>();
-                if (marker != null)
-                    return marker.surface;
+            RaycastHit hit = default;
+            bool hasGround = Physics.SphereCast(origin, GroundedRadius, -upDirection, out hit,
+                    0.5f, GroundLayers, QueryTriggerInteraction.Ignore);
 
-                // 2) 按物体名 / 物理材质名兜底识别
-                string hint = hit.collider.gameObject.name;
-                if (hit.collider.sharedMaterial != null)
-                    hint += " " + hit.collider.sharedMaterial.name;
-                return ClassifySurfaceName(hint);
+            // 1) 区域体积：玩家站在某个挂了标记的 Trigger 里面。
+            //    水面这类“没有能站人的碰撞体”的东西只能这样声明 —— Trigger 不挡路，
+            //    站进去就按整片区域切地表。
+            GGJStepSurfaceMarker volumeMarker = DetectSurfaceMarkerVolume(origin);
+            if (volumeMarker != null)
+                return volumeMarker.surface;
+
+            // 2) 踩在实体地面上：碰撞体 / 父物体上的显式标记
+            if (hasGround)
+            {
+                GGJStepSurfaceMarker groundMarker = hit.collider.GetComponentInParent<GGJStepSurfaceMarker>();
+                if (groundMarker != null)
+                    return groundMarker.surface;
             }
 
+            // 3) 没挂标记 → 默认地板组
             return AudioManager.StepSurface.Floor;
         }
 
-        private static AudioManager.StepSurface ClassifySurfaceName(string nameHint)
+        /// <summary>
+        /// 在脚下做一次体积检测（包含 Trigger），找出玩家当前所处的地表区域标记。
+        /// 区域标记同样是 GGJStepSurfaceMarker，只是挂在 Trigger 体积上：勾着 Is Trigger，
+        /// 不会挡路、不影响玩家站在下面的真实地面上。这里用 ~0 全层扫描，
+        /// 所以区域物体放哪一层、在不在 GroundLayers 里都无所谓。
+        /// 多个区域重叠时返回包围盒最小的那个（小 = 更具体的局部覆盖）。
+        /// </summary>
+        private GGJStepSurfaceMarker DetectSurfaceMarkerVolume(Vector3 feetPosition)
         {
-            if (string.IsNullOrEmpty(nameHint))
-                return AudioManager.StepSurface.Floor;
+            float radius = Mathf.Max(GroundedRadius, SurfaceVolumeMinRadius);
+            int count = Physics.OverlapSphereNonAlloc(feetPosition, radius, _surfaceOverlapBuffer,
+                ~0, QueryTriggerInteraction.Collide);
 
-            string key = nameHint.ToLowerInvariant();
-            if (key.Contains("grass"))  return AudioManager.StepSurface.Grass;
-            if (key.Contains("sand"))   return AudioManager.StepSurface.Sand;
-            if (key.Contains("water") || key.Contains("puddle")) return AudioManager.StepSurface.Water;
-            if (key.Contains("dirt") || key.Contains("mud") || key.Contains("soil")) return AudioManager.StepSurface.Dirt;
-            if (key.Contains("mushroom")) return AudioManager.StepSurface.Mushroom;
-            return AudioManager.StepSurface.Floor;
+            GGJStepSurfaceMarker best = null;
+            float bestVolume = float.MaxValue;
+
+            for (int i = 0; i < count; i++)
+            {
+                Collider col = _surfaceOverlapBuffer[i];
+                _surfaceOverlapBuffer[i] = null;
+                if (col == null)
+                    continue;
+
+                // 跳过玩家自身（含子物体）的碰撞体，避免误命中挂在角色身上的标记
+                if (col.transform.IsChildOf(transform))
+                    continue;
+
+                GGJStepSurfaceMarker marker = col.GetComponentInParent<GGJStepSurfaceMarker>();
+                if (marker == null)
+                    continue;
+
+                Vector3 size = col.bounds.size;
+                float volume = size.x * size.y * size.z;
+                if (volume < bestVolume)
+                {
+                    bestVolume = volume;
+                    best = marker;
+                }
+            }
+
+            return best;
         }
 
         private void OnLand(AnimationEvent animationEvent)
@@ -661,9 +717,12 @@ namespace StarterAssets
                 {
                     AudioSource.PlayClipAtPoint(LandingAudioClip, transform.TransformPoint(_controller.center), FootstepAudioVolume);
                 }
-                else if (AudioManager.Instance != null)
+                else
                 {
-                    AudioManager.Instance.PlayLand();
+                    AudioManager.EnsureCreated();
+
+                    if (AudioManager.Instance != null)
+                        AudioManager.Instance.PlayLand();
                 }
             }
         }

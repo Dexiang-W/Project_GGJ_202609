@@ -38,6 +38,12 @@ public class GameplayHUD : MonoBehaviour
     private Outline messageOutline;
     private Coroutine messageFadeRoutine;
 
+    // 交互提示（“按 E 拾取 / 按 E 查看”），玩家靠近可交互物体时显示在屏幕下方。
+    // promptOwner 记录当前是谁在显示，避免多个物体互相把对方的提示关掉。
+    private Text interactPromptText;
+    private Outline interactPromptOutline;
+    private object promptOwner;
+
     // 正式游玩 UI 的父节点（左上角能量格 + 耐力条）。过场期间可以整体隐藏，
     // 避免黑幕还没淡出就先看到这些 UI。
     private GameObject gameplayUiRoot;
@@ -260,6 +266,63 @@ public class GameplayHUD : MonoBehaviour
         SetMessageAlpha(to);
     }
 
+    // ---------------------------------------------------------------- 交互提示（按 E …）
+
+    /// <summary>
+    /// 在屏幕下方显示交互提示（例如“按 E 拾取”）。
+    /// owner 传调用方自己：同一时刻只有最后一个 owner 的提示生效，
+    /// 这样多个可交互物体重叠时不会互相把对方的提示关掉。
+    /// </summary>
+    public void ShowInteractPrompt(object owner, string text)
+    {
+        if (interactPromptText == null)
+            return;
+
+        if (string.IsNullOrEmpty(text))
+        {
+            HideInteractPrompt(owner);
+            return;
+        }
+
+        promptOwner = owner;
+        interactPromptText.text = text;
+        interactPromptText.enabled = true;
+        SetPromptAlpha(1f);
+    }
+
+    /// <summary>隐藏交互提示。若当前显示的不是自己的（owner 不符），则忽略这次调用。</summary>
+    public void HideInteractPrompt(object owner)
+    {
+        if (interactPromptText == null)
+            return;
+
+        if (promptOwner != null && !ReferenceEquals(promptOwner, owner))
+            return;
+
+        promptOwner = null;
+        interactPromptText.text = string.Empty;
+        interactPromptText.enabled = false;
+        SetPromptAlpha(0f);
+    }
+
+    private void SetPromptAlpha(float alpha)
+    {
+        if (interactPromptText == null)
+            return;
+
+        float clamped = Mathf.Clamp01(alpha);
+        Color c = interactPromptText.color;
+        c.a = clamped;
+        interactPromptText.color = c;
+
+        if (interactPromptOutline != null)
+        {
+            Color oc = interactPromptOutline.effectColor;
+            oc.a = clamped * 0.85f;
+            interactPromptOutline.effectColor = oc;
+        }
+    }
+
     private void StopMessageFade()
     {
         if (messageFadeRoutine == null)
@@ -383,6 +446,35 @@ public class GameplayHUD : MonoBehaviour
         messageText = msgText;
         messageOutline = outline;
         HideMessage();
+
+        // —— 交互提示（底部居中，靠近可交互物体时显示“按 E 拾取”等） ——
+        GameObject promptGO = CreateUiChild("InteractPrompt", gameObject.transform);
+        RectTransform promptRT = promptGO.GetComponent<RectTransform>();
+        promptRT.anchorMin = new Vector2(0.5f, 0f);
+        promptRT.anchorMax = new Vector2(0.5f, 0f);
+        promptRT.pivot = new Vector2(0.5f, 0f);
+        promptRT.anchoredPosition = new Vector2(0f, 150f);
+        promptRT.sizeDelta = new Vector2(900f, 90f);
+
+        Text promptText = promptGO.AddComponent<Text>();
+        promptText.font = GetDefaultFont();
+        promptText.fontSize = 38;
+        promptText.fontStyle = FontStyle.Bold;
+        promptText.color = Color.white;
+        promptText.alignment = TextAnchor.MiddleCenter;
+        promptText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        promptText.verticalOverflow = VerticalWrapMode.Overflow;
+        promptText.raycastTarget = false;
+        Outline promptOutline = promptGO.AddComponent<Outline>();
+        promptOutline.effectColor = new Color(0f, 0f, 0f, 0.85f);
+        promptOutline.effectDistance = new Vector2(2f, -2f);
+
+        interactPromptText = promptText;
+        interactPromptOutline = promptOutline;
+        promptOwner = null;
+        promptText.text = string.Empty;
+        promptText.enabled = false;
+        SetPromptAlpha(0f);
 
         // —— 正式游玩 UI 根节点：能量格 + 耐力条都挂在它下面，方便过场期间整体隐藏 ——
         // 必须铺满整个 Canvas，子物体才能继续按屏幕左上角定位。

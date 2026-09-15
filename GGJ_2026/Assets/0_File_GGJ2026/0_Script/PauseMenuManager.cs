@@ -137,6 +137,11 @@ public class PauseMenuManager : MonoBehaviour
 
     private void Update()
     {
+        // 纸张阅读 / 书本界面开着（或刚被 ESC 关掉的这一帧）时，ESC 归它们用：
+        // 只关掉阅读界面，不弹出暂停菜单
+        if (GGJBookSystem.BlocksPauseToggle)
+            return;
+
         if (!IsPaused)
         {
             // 打开菜单：正式游玩中允许手柄 Start；标题界面只接受 ESC（标题里手柄 Start 是“开始游戏”）

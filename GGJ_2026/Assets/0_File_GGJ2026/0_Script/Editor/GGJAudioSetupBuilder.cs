@@ -172,6 +172,7 @@ public static class GGJAudioSetupBuilder
         am.injectClip = inject;
         am.bounceClip = bounce;
         am.footstepClips = footsteps;
+        am.floorStepClips = footsteps;
         am.grassStepClips = grassSteps;
         am.sandStepClips = sandSteps;
         am.waterStepClips = puddleSteps;

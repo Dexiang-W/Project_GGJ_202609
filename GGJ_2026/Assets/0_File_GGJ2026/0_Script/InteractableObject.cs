@@ -37,6 +37,13 @@ public class InteractableObject : MonoBehaviour
     /// <summary>所有处于激活状态的可交互物体（用于算出“谁离玩家最近”）。</summary>
     private static readonly HashSet<InteractableObject> ActiveObjects = new HashSet<InteractableObject>();
 
+    /// <summary>
+    /// 全局输入屏蔽开关：为 true 时所有可交互物体都不再高亮、也不再响应 E / Q。
+    /// 需要独占输入的全屏界面（例如书本 / 纸张阅读界面 GGJBookSystem）打开时置 true、关闭时置 false，
+    /// 避免“按 E 关界面”的同一帧把旁边的高亮物体一起触发。
+    /// </summary>
+    public static bool SuppressInteractionInput { get; set; }
+
     [Header("检测范围")]
     [Tooltip("玩家与物体的中心点距离小于该值时，物体边缘开始高亮并允许按 E 交互")]
     [SerializeField] private float interactDistance = 4f;
@@ -46,6 +53,13 @@ public class InteractableObject : MonoBehaviour
     [SerializeField] private Color highlightColor = new Color(0.15f, 1f, 0.6f, 1f);
     [Tooltip("描边粗细（物体空间单位；物体越大可适当调大）")]
     [SerializeField] private float outlineWidth = 0.05f;
+    [Tooltip("薄片模式：纸张 / 海报这类“只有一个面”的开放网格（Plane、纸片），沿法线挤出的描边壳会被自己挡住看不见。" +
+             "勾选后改用“整体放大一圈”的描边方式。P_Paper 会自动开启（见 GGJPaperNote）。")]
+    [SerializeField] private bool flatOutline = false;
+    [Tooltip("薄片模式：整体放大的比例（0.05 ≈ 轮廓外扩 5%，越大描边越粗）")]
+    [SerializeField] private float flatGrow = 0.05f;
+    [Tooltip("薄片模式：沿视线方向往后推的世界距离，保证原网格挡住中间只露出边缘")]
+    [SerializeField] private float flatBias = 0.01f;
 
     [Header("交互设置")]
     [Tooltip("交互后是否只用一次（用完即永久取消高亮与交互）")]
@@ -83,6 +97,7 @@ public class InteractableObject : MonoBehaviour
     private const string OutlineShaderName = "GGJ2026/OutlineShell";
 
     private readonly List<GameObject> outlineShells = new List<GameObject>();
+    private readonly List<Material> flatMaterials = new List<Material>();
     private Material outlineMaterial;
     private bool warnedNoMesh;
     private bool consumed;
@@ -105,13 +120,18 @@ public class InteractableObject : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (outlineMaterial != null)
-            Destroy(outlineMaterial);
-        outlineShells.Clear();
+        DestroyOutlineShells();
     }
 
     private void Update()
     {
+        // 有全屏界面（书本 / 纸张阅读等）独占输入时：灭掉高亮、不响应 E / Q
+        if (SuppressInteractionInput)
+        {
+            SetHighlight(false);
+            return;
+        }
+
         // 多档能量（蘑菇等）：每一档都能 E 充能 / Q 回收，各自独立
         if (multiLevelCharge && energyTarget != null)
         {
@@ -527,8 +547,18 @@ public class InteractableObject : MonoBehaviour
     private void SetHighlight(bool on, bool reclaimColor = false)
     {
         // 描边颜色随用途切换（E 充能绿 / Q 回收黄）
-        if (on && outlineMaterial != null)
-            outlineMaterial.SetColor("_Color", reclaimColor ? reclaimHighlightColor : highlightColor);
+        if (on)
+        {
+            Color color = reclaimColor ? reclaimHighlightColor : highlightColor;
+            if (outlineMaterial != null)
+                outlineMaterial.SetColor("_Color", color);
+
+            for (int i = 0; i < flatMaterials.Count; i++)
+            {
+                if (flatMaterials[i] != null)
+                    flatMaterials[i].SetColor("_Color", color);
+            }
+        }
 
         if (highlightOn == on)
             return;
@@ -621,7 +651,7 @@ public class InteractableObject : MonoBehaviour
         shell.layer = source.gameObject.layer;
 
         shell.AddComponent<MeshFilter>().sharedMesh = source.sharedMesh;
-        shell.AddComponent<MeshRenderer>().sharedMaterial = outlineMaterial;
+        shell.AddComponent<MeshRenderer>().sharedMaterial = GetShellMaterial(source.sharedMesh);
 
         outlineShells.Add(shell);
     }
@@ -638,9 +668,63 @@ public class InteractableObject : MonoBehaviour
         clone.rootBone = source.rootBone;
         clone.quality = source.quality;
         clone.updateWhenOffscreen = true;   // 镜头外也跟随骨骼更新，避免走近才“啪”地出现
-        clone.sharedMaterial = outlineMaterial;
+        clone.sharedMaterial = GetShellMaterial(source.sharedMesh);
 
         outlineShells.Add(shell);
+    }
+
+    /// <summary>
+    /// 取描边壳要用的材质：普通模式共用 outlineMaterial（法线挤出）；
+    /// 薄片模式给每个网格单独建一份（放大比例 + 网格中心各不同）。
+    /// </summary>
+    private Material GetShellMaterial(Mesh mesh)
+    {
+        if (!flatOutline || outlineMaterial == null)
+            return outlineMaterial;
+
+        Material mat = new Material(outlineMaterial) { name = $"{name}_OutlineFlatMat" };
+        mat.SetFloat("_Grow", Mathf.Max(0.001f, flatGrow));
+        mat.SetFloat("_Bias", Mathf.Max(0f, flatBias));
+        mat.SetVector("_Center", mesh != null ? mesh.bounds.center : Vector3.zero);
+        mat.SetColor("_Color", highlightColor);
+        flatMaterials.Add(mat);
+        return mat;
+    }
+
+    /// <summary>销毁已生成的描边壳与材质（切换描边模式 / 物体销毁时调用）。</summary>
+    private void DestroyOutlineShells()
+    {
+        for (int i = 0; i < outlineShells.Count; i++)
+        {
+            if (outlineShells[i] != null)
+                Destroy(outlineShells[i]);
+        }
+        outlineShells.Clear();
+
+        for (int i = 0; i < flatMaterials.Count; i++)
+        {
+            if (flatMaterials[i] != null)
+                Destroy(flatMaterials[i]);
+        }
+        flatMaterials.Clear();
+
+        if (outlineMaterial != null)
+            Destroy(outlineMaterial);
+        outlineMaterial = null;
+
+        highlightOn = false;
+    }
+
+    /// <summary>
+    /// 切换“薄片描边”模式（纸张等开放网格用）：会重建描边壳，可在运行时调用。
+    /// </summary>
+    public void SetFlatOutline(bool value)
+    {
+        if (flatOutline == value)
+            return;
+
+        flatOutline = value;
+        DestroyOutlineShells();
     }
 
     // ---------------------------------------------------------------- 工具
