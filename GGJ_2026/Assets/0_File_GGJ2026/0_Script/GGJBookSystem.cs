@@ -103,6 +103,10 @@ public class GGJBookSystem : MonoBehaviour
     [SerializeField] private float bodyWidth = 1000f;
     [Tooltip("正文区域最大高度：文字再多也不超过这个高度，避免溢出纸张")]
     [SerializeField] private float bodyMaxHeight = 470f;
+    [Tooltip("正文基础字号；文字超出纸张时会在 基础字号 ~ 最小字号 之间自动缩小")]
+    [SerializeField] private int bodyFontSize = 32;
+    [Tooltip("超长文案自动缩字的最小字号（再小看不清就不缩了）")]
+    [SerializeField] private int bodyMinFontSize = 14;
     [Tooltip("正文相对纸张中心的上下偏移（负值 = 略微下移，给顶部标题让位）")]
     [SerializeField] private float bodyOffsetY = -10f;
 
@@ -466,6 +470,9 @@ public class GGJBookSystem : MonoBehaviour
         if (bodyText == null || bodyRT == null)
             return;
 
+        // 每次排版都先恢复基础字号（短文案不会被上一张超长纸的小字号连累）
+        bodyText.fontSize = bodyFontSize;
+
         if (!centerBodyText)
         {
             bodyText.alignment = TextAnchor.UpperLeft;
@@ -479,6 +486,15 @@ public class GGJBookSystem : MonoBehaviour
         bodyRT.sizeDelta = new Vector2(bodyWidth, bodyMaxHeight);
         bodyRT.ForceUpdateRectTransforms();
         float preferred = bodyText.preferredHeight;
+
+        // 超长文案：按“需要高度 / 可用高度”的比例把字号缩到刚好放得下为止
+        if (preferred > bodyMaxHeight && bodyFontSize > bodyMinFontSize)
+        {
+            float scale = bodyMaxHeight / preferred;
+            int shrunk = Mathf.Clamp(Mathf.FloorToInt(bodyFontSize * scale), bodyMinFontSize, bodyFontSize);
+            bodyText.fontSize = shrunk;
+            preferred = bodyText.preferredHeight;
+        }
 
         // 夹在 [一行, 最大高度] 之间：短文字收缩后居中，超长文字也不至于溢出纸张
         float minHeight = bodyText.fontSize * bodyText.lineSpacing;
@@ -548,7 +564,7 @@ public class GGJBookSystem : MonoBehaviour
         bodyRT.sizeDelta = new Vector2(bodyWidth, bodyMaxHeight);
         bodyText = bodyRT.gameObject.AddComponent<Text>();
         bodyText.font = GetFont();
-        bodyText.fontSize = 32;
+        bodyText.fontSize = bodyFontSize;
         bodyText.color = textColor;
         bodyText.alignment = TextAnchor.MiddleCenter;
         bodyText.horizontalOverflow = HorizontalWrapMode.Wrap;

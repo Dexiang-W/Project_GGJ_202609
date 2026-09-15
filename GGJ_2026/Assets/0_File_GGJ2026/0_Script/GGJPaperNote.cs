@@ -20,7 +20,7 @@ public class GGJPaperNote : GGJInteractableBase
     [Tooltip("书本里 / 阅读界面顶部显示的标题")]
     [SerializeField] private string paperTitle = "无名的纸片";
     [Tooltip("纸张上的正文叙述（支持换行）")]
-    [TextArea(3, 12)]
+    [TextArea(10, 40)]
     [SerializeField] private string bodyText = "（在这里写这张纸上的文字）";
     [Tooltip("纸张纹理插槽：阅读界面的背景就换成这张贴图；留空用书本系统的默认纸张纹理")]
     [SerializeField] private Texture2D paperTexture;
