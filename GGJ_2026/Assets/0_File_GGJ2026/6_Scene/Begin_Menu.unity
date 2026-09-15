@@ -4952,6 +4952,9 @@ MonoBehaviour:
   interactDistance: 4
   highlightColor: {r: 1, g: 1, b: 1, a: 1}
   outlineWidth: 0.08
+  flatOutline: 0
+  flatGrow: 0.05
+  flatBias: 0.01
   consumeOnInteract: 1
   OnInteract:
     m_PersistentCalls:
@@ -5897,6 +5900,27 @@ MonoBehaviour:
   playerTag: Player
   energyAmount: 1
   oneShot: 1
+  respawnAfterPickup: 0
+  respawnSeconds: 8
+  idleClip: {fileID: 0}
+  playIdleClipOnStart: 1
+  disableAnimatorWhenUsingLegacy: 1
+  fallbackIdleMotion: 1
+  idleFloatAmplitude: 0.08
+  idleFloatSpeed: 1.6
+  idleSpinSpeed: 35
+  randomizeIdlePhase: 1
+  flyToPlayerOnPickup: 1
+  absorbDuration: 0.45
+  absorbTargetOverride: {fileID: 0}
+  absorbHeightOffset: 1
+  absorbSpinSpeed: 720
+  addEnergyOnArrive: 0
+  useDistanceFallback: 1
+  pickupRadius: 1.2
+  OnRespawn:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!64 &420789864
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -47562,6 +47586,9 @@ MonoBehaviour:
   interactDistance: 4
   highlightColor: {r: 1, g: 1, b: 1, a: 1}
   outlineWidth: 0.08
+  flatOutline: 0
+  flatGrow: 0.05
+  flatBias: 0.01
   consumeOnInteract: 1
   OnInteract:
     m_PersistentCalls:
@@ -56216,6 +56243,27 @@ MonoBehaviour:
   playerTag: Player
   energyAmount: 1
   oneShot: 1
+  respawnAfterPickup: 0
+  respawnSeconds: 8
+  idleClip: {fileID: 0}
+  playIdleClipOnStart: 1
+  disableAnimatorWhenUsingLegacy: 1
+  fallbackIdleMotion: 1
+  idleFloatAmplitude: 0.08
+  idleFloatSpeed: 1.6
+  idleSpinSpeed: 35
+  randomizeIdlePhase: 1
+  flyToPlayerOnPickup: 1
+  absorbDuration: 0.45
+  absorbTargetOverride: {fileID: 0}
+  absorbHeightOffset: 1
+  absorbSpinSpeed: 720
+  addEnergyOnArrive: 0
+  useDistanceFallback: 1
+  pickupRadius: 1.2
+  OnRespawn:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!64 &1650556476
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -96534,6 +96582,9 @@ MonoBehaviour:
   fadeToBlackSeconds: 0.8
   blackHoldSeconds: 1
   fadeFromBlackSeconds: 0.9
+  continueRunDistance: 3
+  continueRunMaxSeconds: 2.5
+  continueRunAxis: 1
   useSpawnFacing: 1
   oneShot: 0
   cleanupExtraPlayers: 1
@@ -99082,6 +99133,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Layer
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8136972482338599957, guid: f427432c7217d334fb687e48295832ed,
+        type: 3}
+      propertyPath: m_SlopeLimit
+      value: 45
       objectReference: {fileID: 0}
     - target: {fileID: 8136972482338599967, guid: f427432c7217d334fb687e48295832ed,
         type: 3}

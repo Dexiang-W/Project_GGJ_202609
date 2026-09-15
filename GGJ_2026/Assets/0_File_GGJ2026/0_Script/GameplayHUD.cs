@@ -218,6 +218,29 @@ public class GameplayHUD : MonoBehaviour
         messageFadeRoutine = StartCoroutine(FadeMessageAlphaRoutine(0f, 1f, messageFadeInSeconds));
     }
 
+    /// <summary>提示文字当前是否正显示在屏幕上（用于判断该“换字”还是该“重新淡入”）。</summary>
+    public bool IsMessageVisible =>
+        messageText != null && messageText.enabled && messageText.color.a > 0.001f;
+
+    /// <summary>
+    /// 在提示文字【已经显示】的情况下直接换内容，不重播淡入动画。
+    /// 给“倒计时”这类每秒刷新的文字用：走 ShowMessage 会每次把透明度归零重新淡入，一秒一闪很难看；
+    /// 这里只在文字还没显示时才退化成 ShowMessage（正常淡入一次）。
+    /// </summary>
+    public void SetMessageText(string text)
+    {
+        if (messageText == null)
+            return;
+
+        if (!messageText.enabled || messageText.color.a <= 0.001f)
+        {
+            ShowMessage(text);
+            return;
+        }
+
+        messageText.text = text ?? string.Empty;
+    }
+
     /// <summary>把提示文字淡隐掉（再次淡入显示前会立刻停止上一次淡入/淡出）。</summary>
     public void HideMessage()
     {

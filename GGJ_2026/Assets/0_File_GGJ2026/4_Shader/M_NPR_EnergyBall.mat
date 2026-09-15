@@ -63,18 +63,18 @@ Material:
     - _VatRowsPerFrame: 4
     - _VatTexHeight: 1000
     - _VatTotalFrames: 250
-    - _WobbleAmp: 0.0004
+    - _WobbleAmp: 0.0003
     - _WobbleEnable: 1
-    - _WobbleFreq: 2.4
+    - _WobbleFreq: 6.71
     - _WobbleNormal: 0.7
-    - _WobbleSpeed: 1
+    - _WobbleSpeed: 1.5
     - _Wrap: 0.35
     m_Colors:
     - _BaseColorDark: {r: 0.0722, g: 0.1468, b: 0.0256, a: 1}
     - _BaseColorLight: {r: 0.2897, g: 0.4175, b: 0.1165, a: 1}
     - _BaseColorMid: {r: 0.1229, g: 0.2224, b: 0.0434, a: 1}
     - _HighlightColor: {r: 0.4795, g: 0.5827, b: 0.3515, a: 1}
-    - _RimColor: {r: 0.5, g: 0.6, b: 0.3, a: 1}
+    - _RimColor: {r: 0.6753247, g: 1, b: 0, a: 1}
     - _SSSColor: {r: 0.3, g: 0.45, b: 0.15, a: 1}
     - _ShadowTint: {r: 0.5, g: 0.55, b: 0.45, a: 1}
   m_BuildTextureStacks: []

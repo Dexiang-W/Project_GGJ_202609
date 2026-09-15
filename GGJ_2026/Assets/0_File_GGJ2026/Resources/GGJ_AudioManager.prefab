@@ -65,15 +65,15 @@ MonoBehaviour:
     musicFadeInSeconds: -1
     musicFadeOutSeconds: -1
   - sceneName: Level2
-    musicClip: {fileID: 8300000, guid: 33bf2c478896a0e47b03a8539e72c06f, type: 3}
+    musicClip: {fileID: 8300000, guid: 26bf4e436c69186418f05607d199ccf5, type: 3}
     musicVolume: 0.1
     ambienceClip: {fileID: 8300000, guid: 27ae88ee77979c14394536780e9da11d, type: 3}
     ambienceVolume: 0.07
     musicFadeInSeconds: -1
     musicFadeOutSeconds: -1
   - sceneName: Level3+4
-    musicClip: {fileID: 0}
-    musicVolume: 0.3
+    musicClip: {fileID: 8300000, guid: 871383a2d11add34f9abec75c17edd01, type: 3}
+    musicVolume: 0.035
     ambienceClip: {fileID: 8300000, guid: 27ae88ee77979c14394536780e9da11d, type: 3}
     ambienceVolume: 0.2
     musicFadeInSeconds: -1
