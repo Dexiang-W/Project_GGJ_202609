@@ -14,8 +14,10 @@ using UnityEngine.Events;
 ///   · 停留时长 = standDuration（秒）：踩上去开始计时，累计到这个时长就消失 —— 这是核心参数；
 ///   · wobbleStartDelay（秒）：踩上去之后先静止多久才开始晃 —— 要“踩上去几秒后才开始晃动”就调大这个值
 ///     （例如 1.5 ~ 2 秒）；设为 0 = 一踩上就晃；
-///   · 晃动幅度 / 频率 / 抖动 / 回正时间都在「轻微晃动」一栏，默认幅度很小（1° ~ 3.5°），
-///     越接近消失晃得越明显（幅度按“开始晃动之后”这段进度从 wobbleMinAngle 涨到 wobbleMaxAngle）；
+///   · 晃动 = 沿关卡“左右”方向的轻微横移（1.5 ~ 5 厘米），越接近消失晃得越明显
+///     （幅度按“开始晃动之后”这段进度从 wobbleMinDistance 涨到 wobbleMaxDistance）；
+///     只平移、不倾斜：转一度看着不多，但板子两端会随之上下翘，站在上面的人跟着上下起伏，
+///     观感会剧烈得多 —— 这里只要让玩家看懂“这块板快掉了”就够了；
 ///   · 计时只看“人还在不在平台上”，在平台上怎么活动都不会重置：站立区的竖直方向是一段
 ///     “高度带”（从平台表面往上 stayHeightAbovePlatform 米），起跳、落下、原地弹跳都仍然算在平台上。
 ///   · 「玩家离开后计时清零」默认勾选：真的走开（水平离开平台范围）就重新计时；
@@ -120,17 +122,14 @@ public class DisappearingPlatform : MonoBehaviour
              "想只晃模型、不动碰撞体的话，把模型子物体拖到这里。")]
     [SerializeField] private Transform wobbleTarget;
 
-    [Tooltip("刚踩上去时的晃动幅度（度）：默认很小，只是看起来有点不稳")]
-    [SerializeField] private float wobbleMinAngle = 0.8f;
+    [Tooltip("刚踩上去时左右横移的幅度（米）：默认只有一两厘米，就是“有点松了”的意思")]
+    [SerializeField] private float wobbleMinDistance = 0.015f;
 
-    [Tooltip("即将消失时的晃动幅度（度）：越大越像“快塌了”")]
-    [SerializeField] private float wobbleMaxAngle = 3.5f;
+    [Tooltip("即将消失时左右横移的幅度（米）：越大越像“快塌了”，不建议超过 0.1（10 厘米）")]
+    [SerializeField] private float wobbleMaxDistance = 0.05f;
 
-    [Tooltip("晃动频率（每秒来回次数）")]
-    [SerializeField] private float wobbleFrequency = 8f;
-
-    [Tooltip("晃动时的位置抖动幅度（米）：0 = 只转不抖；轻微抖动会更有“松了”的感觉")]
-    [SerializeField] private float wobbleShakeDistance = 0.02f;
+    [Tooltip("横移频率（每秒来回次数）：只左右平移、不做倾斜，太快会显得很躁")]
+    [SerializeField] private float wobbleFrequency = 3.5f;
 
     [Tooltip("玩家离开平台后，晃动在多长时间内回复原位（秒）")]
     [SerializeField] private float wobbleRecoverDuration = 0.2f;
@@ -241,6 +240,7 @@ public class DisappearingPlatform : MonoBehaviour
     private Vector3 baseLocalPos;
     private Quaternion baseLocalRot;
     private Vector3 baseScale;
+    private Vector3 wobbleAxisLocal = Vector3.right; // 晃动轴向（父物体空间下、对应世界“左右”的方向）
 
     private Renderer[] visualRenderers = new Renderer[0];   // 平台自身的外观（破碎时整组藏掉）
     private Renderer[] replacedRenderers = new Renderer[0]; // 被 intactVisualPrefab 顶掉的原始外观（永久隐藏，不参与显隐切换）
@@ -305,6 +305,7 @@ public class DisappearingPlatform : MonoBehaviour
 
         baseLocalPos = visualRoot.localPosition;
         baseLocalRot = visualRoot.localRotation;
+        CacheWobbleAxis();
 
         CacheVisualRenderers();
         WarnIfNoSolidCollider();
@@ -406,9 +407,12 @@ public class DisappearingPlatform : MonoBehaviour
     }
 
     /// <summary>
-    /// 按“开始晃动之后的进度”施加晃动：幅度从 wobbleMinAngle 线性涨到 wobbleMaxAngle，越接近消失晃得越厉害；
-    /// progress01 为 0（还没到晃动时刻）时完全回正、绝对静止。
-    /// 位置抖动与旋转共用同一个相位，看起来是同一股力在晃。
+    /// 按“开始晃动之后的进度”施加晃动：只会左右来回平移，
+    /// 幅度从 wobbleMinDistance 线性涨到 wobbleMaxDistance，越接近消失晃得越明显；
+    /// progress01 为 0（还没到晃动时刻）/ wobbleWeight 归零时完全回正、绝对静止。
+    ///
+    /// 刻意不倾斜：转一度纸面上只是“一点点”，但板的两端会随之上下翘，
+    /// 站在上面的人跟着上下起伏，观感比纯平移剧烈得多 —— 这里只需要“提示快掉了”。
     /// </summary>
     private void ApplyWobblePose(float progress01)
     {
@@ -417,22 +421,34 @@ public class DisappearingPlatform : MonoBehaviour
 
         wobblePhase += Time.deltaTime * Mathf.Max(0f, wobbleFrequency) * Mathf.PI * 2f;
 
-        float amplitude = Mathf.Lerp(wobbleMinAngle, wobbleMaxAngle, progress01) * wobbleWeight;
-
-        float tiltX = Mathf.Sin(wobblePhase) * amplitude;
-        float tiltZ = Mathf.Cos(wobblePhase * 0.87f) * amplitude;
-
-        Vector3 shake = Vector3.zero;
-        if (wobbleShakeDistance > 0f)
+        // 完全回正：把之前可能残留的位移 / 旋转也一次性拉回去
+        if (wobbleWeight <= 0f)
         {
-            shake = new Vector3(
-                Mathf.Sin(wobblePhase * 1.7f),
-                0f,
-                Mathf.Cos(wobblePhase * 1.31f)) * (wobbleShakeDistance * wobbleWeight * Mathf.Lerp(0.5f, 1f, progress01));
+            visualRoot.localPosition = baseLocalPos;
+            visualRoot.localRotation = baseLocalRot;
+            return;
         }
 
-        visualRoot.localRotation = baseLocalRot * Quaternion.Euler(tiltX, 0f, tiltZ);
+        float amplitude = Mathf.Lerp(wobbleMinDistance, wobbleMaxDistance, progress01) * wobbleWeight;
+        Vector3 shake = wobbleAxisLocal * (Mathf.Sin(wobblePhase) * amplitude);
+
         visualRoot.localPosition = baseLocalPos + shake;
+    }
+
+    /// <summary>
+    /// 算晃动轴向：在世界坐标里“左右”那条轴，换到 visualRoot 的父物体空间。
+    /// 平台本身没有旋转时就是 (1,0,0)；带旋转的平台上也仍然横着晃，不会变成上下抖。
+    /// </summary>
+    private void CacheWobbleAxis()
+    {
+        wobbleAxisLocal = Vector3.right;
+
+        if (visualRoot == null || visualRoot.parent == null)
+            return;
+
+        Vector3 axis = visualRoot.parent.InverseTransformDirection(Vector3.right);
+        if (axis.sqrMagnitude > 1e-6f)
+            wobbleAxisLocal = axis.normalized;
     }
 
     // ---------------------------------------------------------------- 消失 / 恢复

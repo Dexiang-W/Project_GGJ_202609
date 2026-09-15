@@ -54,7 +54,14 @@ public class RespawnZone : MonoBehaviour
         if (!other.CompareTag(playerTag))
             return;
 
-        if (inProgress || used)
+        if (used)
+            return;
+
+        // 全局复活总闸：已经有复活流程在跑（例如玩家在黑屏 / 传送过程中又走进了另一个死亡区，
+        // 或者被流水线危险货物撞到），或正处于暂停 / 关卡转场 / 重开流程 → 这次触发直接忽略。
+        // 不放行才会避免两套流程交错：输入被后一套记成“本来就是关的”而再也恢复不了，
+        // 传送和黑幕也会互相打断（表现为躺着复活、黑幕卡住、文字提前消失）。
+        if (!RespawnFlow.TryBegin())
             return;
 
         if (oneShot)
@@ -69,72 +76,90 @@ public class RespawnZone : MonoBehaviour
 
     private IEnumerator RespawnRoutine()
     {
-        ThirdPersonController player = ThirdPersonController.Instance;
-        if (player == null)
-            player = FindObjectOfType<ThirdPersonController>();
+        // 记下“关输入之前”的输入状态：抢到总闸的流程才是第一个关输入的，
+        // 所以这里拿到的必然是玩家真实的输入状态（抢不到总闸的流程不会进来）。
+        bool hadInput = true;
+        ThirdPersonController player = null;
 
-        if (player == null)
+        try
         {
-            Debug.LogWarning("[RespawnZone] 场景里没有玩家（ThirdPersonController）。", this);
-            inProgress = false;
-            yield break;
-        }
+            player = ThirdPersonController.Instance;
+            if (player == null)
+                player = FindObjectOfType<ThirdPersonController>();
 
-        GameplayHUD.EnsureCreated();
-
-        bool hadInput = SetPlayerInput(player, false);
-
-        // 1. 画面逐渐变黑
-        yield return GameplayHUD.Instance.FadeToBlackRoutine(fadeToBlackSeconds);
-
-        // 2. 全黑：显示提示文字
-        GameplayHUD.Instance.ShowMessage(messageText);
-        yield return new WaitForSecondsRealtime(Mathf.Max(0.05f, blackHoldSeconds));
-
-        // 3. 传送回重生点（传送前禁用 CharacterController，避免穿透/抖动）
-        CharacterController cc = player.GetComponent<CharacterController>();
-        if (respawnPoint != null)
-        {
-            // 传送期间屏蔽“相机触发区”：防止落点恰好位于某拉远/固定机位的触发区内时，
-            // 相机在重生瞬间被额外切换（表现为“重生后相机被拉远”）。
-            CameraTriggerVolume.SuppressCameraSwitching = true;
-
-            if (cc != null) cc.enabled = false;
-            player.transform.position = respawnPoint.position;
-            if (useRespawnFacing)
-                player.transform.rotation = respawnPoint.rotation;
-            if (cc != null) cc.enabled = true;
-
-            // 先让物理把触发区 进入/离开 事件结算完（此刻屏幕仍全黑，玩家看不到过程）
-            yield return new WaitForFixedUpdate();
-            yield return null;
-
-            // 相机回到默认“跟拍玩家”机位并瞬间就位（位置+旋转+FOV）：
-            // 与重生前的常规跟拍一致，不额外拉远 / 拉近。
-            CameraFollowController cam = CameraFollowController.Instance;
-            if (cam != null)
+            if (player == null)
             {
-                cam.SetNormalMode();
-                cam.SnapToCurrentTarget();
+                Debug.LogWarning("[RespawnZone] 场景里没有玩家（ThirdPersonController）。", this);
+                yield break;
             }
 
-            // 解除屏蔽：此刻画面仍全黑，立刻让触发区重新判定一次，把“落点所在区域”的机位
-            // 重新应用并直接就位 —— 淡出时玩家看到的已经是正确的固定视角，不会有镜头跳动。
-            CameraTriggerVolume.SuppressCameraSwitching = false;
-            CameraTriggerVolume.ReevaluateAll();
+            GameplayHUD.EnsureCreated();
+
+            hadInput = SetPlayerInput(player, false);
+
+            // 1. 画面逐渐变黑
+            yield return GameplayHUD.Instance.FadeToBlackRoutine(fadeToBlackSeconds);
+
+            // 2. 全黑：显示提示文字
+            GameplayHUD.Instance.ShowMessage(messageText);
+            yield return new WaitForSecondsRealtime(Mathf.Max(0.05f, blackHoldSeconds));
+
+            // 3. 传送回重生点
+            if (respawnPoint != null)
+            {
+                // 传送期间屏蔽“相机触发区”：防止落点恰好位于某拉远/固定机位的触发区内时，
+                // 相机在重生瞬间被额外切换（表现为“重生后相机被拉远”）。
+                CameraTriggerVolume.SuppressCameraSwitching = true;
+
+                // 瞬移 + 站直：清掉死亡瞬间的速度 / 输入 / 动画残留，并保证角色一定是竖直的。
+                // 朝向：只有复活点被特意摆过朝向时才对齐它，否则保持角色原本的左右朝向
+                // （默认 0,0,0 的复活点会把角色转成面朝世界 +Z，横版里看着就像“横过来了”）。
+                bool alignToPoint = useRespawnFacing && RespawnFlow.HasCustomFacing(respawnPoint);
+                float yaw = alignToPoint
+                    ? RespawnFlow.HorizontalYawOf(respawnPoint, player.transform.eulerAngles.y)
+                    : player.transform.eulerAngles.y;
+
+                player.RespawnAt(respawnPoint.position, yaw);
+
+                // 先让物理把触发区 进入/离开 事件结算完（此刻屏幕仍全黑，玩家看不到过程）
+                yield return new WaitForFixedUpdate();
+                yield return null;
+
+                // 相机回到默认“跟拍玩家”机位并瞬间就位（位置+旋转+FOV）：
+                // 与重生前的常规跟拍一致，不额外拉远 / 拉近。
+                CameraFollowController cam = CameraFollowController.Instance;
+                if (cam != null)
+                {
+                    cam.SetNormalMode();
+                    cam.SnapToCurrentTarget();
+                }
+
+                // 解除屏蔽：此刻画面仍全黑，立刻让触发区重新判定一次，把“落点所在区域”的机位
+                // 重新应用并直接就位 —— 淡出时玩家看到的已经是正确的固定视角，不会有镜头跳动。
+                CameraTriggerVolume.SuppressCameraSwitching = false;
+                CameraTriggerVolume.ReevaluateAll();
+            }
+
+            // 4. 黑幕淡出（此时机位已确定：落点在触发区内就是该区域的固定视角，否则为普通跟拍）
+            yield return GameplayHUD.Instance.FadeFromBlackRoutine(fadeFromBlackSeconds);
+
+            // 文字再停留一小会后隐藏
+            if (messageStaySeconds > 0f)
+                yield return new WaitForSecondsRealtime(messageStaySeconds);
+            GameplayHUD.Instance.HideMessage();
+
+            // 恢复玩家输入（恢复前会先清掉输入残留）
+            SetPlayerInput(player, hadInput);
         }
+        finally
+        {
+            inProgress = false;
 
-        // 4. 黑幕淡出（此时机位已确定：落点在触发区内就是该区域的固定视角，否则为普通跟拍）
-        yield return GameplayHUD.Instance.FadeFromBlackRoutine(fadeFromBlackSeconds);
-
-        // 文字再停留一小会后隐藏
-        if (messageStaySeconds > 0f)
-            yield return new WaitForSecondsRealtime(messageStaySeconds);
-        GameplayHUD.Instance.HideMessage();
-
-        // 恢复玩家输入
-        SetPlayerInput(player, hadInput);
-        inProgress = false;
+            // 流程被打断（异常 / 提前 return）时，兜底解掉可能留下的相机屏蔽，
+            // 并把复活总闸还回去，否则玩家会一直卡在“输不动 / 再也复活不了”的状态。
+            CameraTriggerVolume.SuppressCameraSwitching = false;
+            RespawnFlow.End();
+        }
     }
 
     /// <summary>停用 / 恢复玩家的 PlayerInput（标题流程里 GameFlow 用的是同一个开关）。</summary>
