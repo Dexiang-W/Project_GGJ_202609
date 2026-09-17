@@ -88,6 +88,10 @@ MonoBehaviour:
   musicFadeSeconds: 1
   musicFadeInSeconds: 1.5
   ambienceFadeSeconds: 1
+  endingOvergrowthMusic: {fileID: 8300000, guid: f67575f5014cce544989cd644b748bd0, type: 3}
+  endingNaturalMusic: {fileID: 8300000, guid: bceab57066ad6c44cb0ed48947b40c3d, type: 3}
+  endingMusicVolume: 0.4
+  endingMusicFadeSeconds: 2.5
   pickupClip: {fileID: 8300000, guid: 5ce800d3647e13647a1b2dab4be88736, type: 3}
   returnClip: {fileID: 8300000, guid: 621693ba6443c334a925563838c5463b, type: 3}
   injectClip: {fileID: 8300000, guid: b234780e9a7b9a043ba33005f4489ec4, type: 3}

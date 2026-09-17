@@ -165,8 +165,9 @@ public class PauseMenuManager : MonoBehaviour
         if (IsPaused)
             return;
 
-        // 转场 / 回标题过程中不响应暂停
-        if (LevelTransitionZone.AnyTransitionRunning || GameTitleRestart.IsRestartInProgress)
+        // 转场 / 回标题 / 结局演出进行中：不响应暂停（抉择期间 Esc 是“暂时取消选择”）
+        if (LevelTransitionZone.AnyTransitionRunning || GameTitleRestart.IsRestartInProgress ||
+            FinaleChoiceDirector.IsChoosing || GiveUpEndingDirector.IsRunning)
             return;
 
         MenuContext context = GetContext();

@@ -564,6 +564,18 @@ public class GGJLevelResetManager : MonoBehaviour
         if (ending != null && ending.IsPlaying)
             return false;
 
+        // 终章实机演出（切场景运镜）期间同样不给重置：此时玩家已被藏起来，按 R 会把演出打断
+        if (EndingFinaleDirector.IsRunning)
+            return false;
+
+        // 结局抉择（走进 AutoCollider → 自动走向 P_Machine → 灰屏提问）期间同样不给重置
+        if (FinaleChoiceDirector.IsRunning)
+            return false;
+
+        // “放弃实验”结局（三段自动行走 + 变形）期间同样不给重置
+        if (GiveUpEndingDirector.IsRunning)
+            return false;
+
         if (player == null)
             return false;
 

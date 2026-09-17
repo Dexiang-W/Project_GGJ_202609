@@ -23,6 +23,10 @@ public static class GGJAudioSetupBuilder
     private const string WindAmbienceClipPath = AudioRoot + "/Ambience/AMB_Wind_Dry.wav";
     private const string RainAmbienceClipPath = AudioRoot + "/Ambience/AMB_Rain_Light.wav";
 
+    // 两个结局各自的 BGM（抉择后循环播放，切场景不会被关卡配乐顶掉）
+    private const string EndingOvergrowthClipPath = AudioRoot + "/Music/MUS_Ending_Overgrowth.wav";
+    private const string EndingNaturalClipPath = AudioRoot + "/Music/MUS_Ending_Natural.wav";
+
     private const string PickupClipPath = AudioRoot + "/SFX/SFX_Energy/SFX_Energy_Pickup.wav";
     private const string ReturnClipPath = AudioRoot + "/SFX/SFX_Energy/SFX_Energy_Return.wav";
     private const string InjectClipPath = AudioRoot + "/SFX/SFX_Energy/SFX_Energy_Inject.wav";
@@ -181,6 +185,13 @@ public static class GGJAudioSetupBuilder
         am.jumpClips = jumps;
         am.landClips = lands;
         am.ambienceSceneName = "Level1";
+
+        // 结局音乐：「隐瞒真相，继续试验」= MUS_Ending_Overgrowth，「揭露真相，停止实验」= MUS_Ending_Natural。
+        // 素材缺失不中止重建（只警告），之后在预制体上手动补也行。
+        am.endingOvergrowthMusic = LoadClip(EndingOvergrowthClipPath);
+        am.endingNaturalMusic = LoadClip(EndingNaturalClipPath);
+        if (am.endingOvergrowthMusic == null || am.endingNaturalMusic == null)
+            Debug.LogWarning("[GGJAudio] 结局音乐（MUS_Ending_*）没找全，请打开预制体手动接上。");
 
         // 响度规范（可在预制体上再微调）：
         //   音乐收敛做垫底 < 环境音明显可闻 < 一次性音效最大且明显盖过其它

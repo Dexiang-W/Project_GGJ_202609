@@ -189,6 +189,18 @@ public class CameraFollowController : MonoBehaviour
 
     // --- 公共方法 ---
 
+    /// <summary>
+    /// 运行时改跟拍目标。换场景后新场景的相机可能是固定机位 / 绑着它自己那个玩家，
+    /// 演出里要把镜头重新绑回当前这个玩家身上就用它。
+    /// </summary>
+    public void SetFollowTarget(Transform target)
+    {
+        followTarget = target;
+        currentVelocity = Vector3.zero;
+    }
+
+    public Transform FollowTarget => followTarget;
+
     /// <summary>切回“跟拍玩家”，过渡时长用组件上的 modeSwitchBlendSeconds。</summary>
     public void SetNormalMode()
     {

@@ -9,7 +9,12 @@ using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// “结局演出”播放器：交互后 渐黑 → 逐条字幕 → 稍候数秒 → 从下往上滚动报幕。
+/// “结局演出”播放器：交互后 渐黑 → 逐条字幕 → 稍候数秒 → 从下往上滚动报幕 →
+/// 结尾图 淡入→停留→淡出（默认共 4 秒），播完全部结束（按 ⑥ 的设置回标题）。
+///
+/// 前面还可以挂一段“终章实机演出”（见下面的 ⓪）：
+///   渐黑 → Final Scene 出现 → 左上角两段文字（玩家可自由活动）→ 渐黑 →
+///   切到枯萎关卡做横移运镜（植物枯萎 / 水面下降 / 草消失）→ 渐黑 → 才播下面的字幕与报幕。
 ///
 /// 用法（以可交互物体触发为例）：
 ///   1. 给物体加 InteractableObject（负责靠近高亮 + 按 E）；
@@ -34,7 +39,23 @@ public class EndingSequencePlayer : MonoBehaviour
     {
         [TextArea(1, 4)] public string text = "";
         [Min(0.2f)] public float holdSeconds = 2.4f;
+        [Tooltip("勾选 = 这一行显示在【屏幕正中间】（用来放最后的“谢谢游玩”之类）；\n" +
+                 "不勾（默认）= 显示在左边（用下面 ③ 样式里的边距 / 宽度）。")]
+        public bool centered;
     }
+
+    [Header("⓪ 终章实机演出（在字幕 / 报幕之前播放）")]
+    [Tooltip("勾选（默认）：交互后先播一段实机演出 —— 渐黑 → 本关的 Final Scene 出现 → " +
+             "左上角两段文字（期间玩家可以自由活动）→ 渐黑 → 切到枯萎关卡做“从左往右”的横移运镜" +
+             "（植物依次枯萎、水面下降、草逐渐消失）→ 渐黑，然后才开始下面的字幕与报幕。\n" +
+             "取消勾选 = 维持原来的行为（交互后直接渐黑出字幕）。")]
+    [SerializeField] private bool playFinaleBeforeSubtitles = true;
+
+    [Tooltip("终章演出的导演（台词 / 运镜 / 枯萎参数都在它身上）。\n" +
+             "留空 = 运行时自动创建一个常驻导演，用它的默认配置（枯萎关卡 Level2、Final Scene、" +
+             "“实验体在弹指间疯狂生长”/“那么，代价呢...”），正常不需要手动摆。\n" +
+             "想微调就在场景里放个空物体挂上 EndingFinaleDirector 并拖到这里（不拖也会自动找到它）。")]
+    [SerializeField] private EndingFinaleDirector finaleDirector;
 
     [Header("① 字幕（黑屏后依次显示；留空则跳过）")]
     [SerializeField] private List<SubtitleLine> subtitleLines = new List<SubtitleLine>
@@ -58,8 +79,12 @@ public class EndingSequencePlayer : MonoBehaviour
     };
 
     [Header("③ 样式")]
-    [SerializeField] private float subtitleFontSize = 54f;
+    [SerializeField] private float subtitleFontSize = 68f;
     [SerializeField] private Color subtitleColor = Color.white;
+    [Tooltip("字幕离屏幕左边的距离（像素，按 1920x1080 参考分辨率）")]
+    [SerializeField] private float subtitleLeftMargin = 120f;
+    [Tooltip("字幕区域宽度（像素）")]
+    [SerializeField] private float subtitleWidth = 1500f;
     [SerializeField] private float creditsFontSize = 46f;
     [SerializeField] private Color creditsColor = new Color(1f, 0.96f, 0.85f, 1f);
 
@@ -93,6 +118,15 @@ public class EndingSequencePlayer : MonoBehaviour
     [Tooltip("OnFinished 触发后、真正切回标题前的黑屏停留秒数（给“最后一句提示 / 收尾音效”留时间）")]
     [SerializeField] private float returnDelaySeconds = 1.2f;
 
+    [Header("⑦ 报幕后的结尾图")]
+    [Tooltip("结尾图（报幕滚完后 淡入→停留→淡出，共 Ending Image Total Seconds 秒，播完全部结束）。\n" +
+             "留空 = 运行时自动读 Resources/GGJ_EndingCard（Sprite / Texture 都行）。")]
+    [SerializeField] private Sprite endingImage;
+    [Tooltip("结尾图淡入 / 淡出时长（秒）")]
+    [SerializeField] private float endingImageFadeSeconds = 1.5f;
+    [Tooltip("结尾图从开始淡入到完全淡出的总时长（秒）：中间停留 = 总时长 − 淡入 − 淡出。默认 4 秒。")]
+    [SerializeField] private float endingImageTotalSeconds = 4f;
+
     // ---------------------------------------------------------------- 运行时
 
     private bool isPlaying;
@@ -104,6 +138,11 @@ public class EndingSequencePlayer : MonoBehaviour
     private Outline subtitleOutline;
     private RectTransform creditsMaskRT;
     private RectTransform creditsWindow;
+
+    /// <summary>全屏结尾图（报幕滚完后 淡入→停留→淡出）。</summary>
+    private Image endingImageObject;
+    /// <summary>结尾图真的播过（播完 = 演出到头了，回标题前不再多等 Return Delay）。</summary>
+    private bool endingImagePlayed;
 
     private readonly List<RectTransform> creditLines = new List<RectTransform>();
 
@@ -125,6 +164,60 @@ public class EndingSequencePlayer : MonoBehaviour
     }
 
     /// <summary>
+    /// 只播“黑屏字幕 → 滚动报幕 → 结束”这一段，跳过 ⓪ 终章实机演出。
+    /// “放弃实验”结局（GiveUpEndingDirector）用这条：调用时画面应已全黑。
+    /// 结束后按本组件的 ⑤ 配置处理（默认停在黑屏 + 自动回标题）。
+    /// </summary>
+    /// <param name="texts">要依次显示的文案（可多条）。</param>
+    /// <param name="holdSeconds">每条停留时长。</param>
+    /// <param name="centered">true = 显示在屏幕正中间（结局定妆句一般用这个）。</param>
+    public void PlayTextsAndCredits(IList<string> texts, float holdSeconds = 3f, bool centered = true)
+    {
+        if (isPlaying)
+            return;
+
+        playFinaleBeforeSubtitles = false;
+
+        if (subtitleLines == null)
+            subtitleLines = new List<SubtitleLine>();
+
+        subtitleLines.Clear();
+
+        if (texts != null)
+        {
+            foreach (string text in texts)
+            {
+                if (string.IsNullOrEmpty(text))
+                    continue;
+
+                subtitleLines.Add(new SubtitleLine
+                {
+                    text = text,
+                    holdSeconds = Mathf.Max(0.2f, holdSeconds),
+                    centered = centered,
+                });
+            }
+        }
+
+        isPlaying = true;
+        StartCoroutine(SequenceRoutine());
+    }
+
+    /// <summary>
+    /// 外部改写“滚动报幕名单”（例如“放弃实验”结局导演要用和 Level5 一样的名单）。
+    /// 传空 / null 则保持原样。
+    /// </summary>
+    public void SetCreditsLines(IList<string> lines)
+    {
+        if (lines == null || lines.Count == 0)
+            return;
+
+        creditsLines = new string[lines.Count];
+        for (int i = 0; i < lines.Count; i++)
+            creditsLines[i] = lines[i] ?? string.Empty;
+    }
+
+    /// <summary>
     /// 清掉跨场景常驻对象并回到标题场景（Begin_Menu），重新开始一局完整游玩。
     /// 可挂到 OnFinished 事件，或由“结束按钮 / 其它脚本”直接调用。
     /// </summary>
@@ -136,8 +229,50 @@ public class EndingSequencePlayer : MonoBehaviour
 
     // ---------------------------------------------------------------- 主流程
 
+    /// <summary>
+    /// 播“终章实机演出”（EndingFinaleDirector）。
+    /// 这一步会切到枯萎关卡，所以本组件所在的物体必须先变成常驻的：
+    /// LoadScene(Single) 会销毁场景里的一切，宿主一旦被销毁，
+    /// 这条协程后面的字幕 / 报幕就永远播不出来了。
+    /// </summary>
+    private IEnumerator RunFinalePrelude()
+    {
+        EndingFinaleDirector director = ResolveFinaleDirector();
+        if (director == null)
+            yield break;
+
+        DontDestroyOnLoad(gameObject.transform.root.gameObject);
+        DontDestroyOnLoad(director.gameObject.transform.root.gameObject);
+
+        yield return director.PlayFinale(this);
+    }
+
+    /// <summary>取终章导演：Inspector 指定 → 场景里查找 → 运行时创建（用脚本默认参数）。</summary>
+    private EndingFinaleDirector ResolveFinaleDirector()
+    {
+        if (finaleDirector != null)
+            return finaleDirector;
+
+        finaleDirector = FindObjectOfType<EndingFinaleDirector>();
+        if (finaleDirector != null)
+            return finaleDirector;
+
+        GameObject go = new GameObject("GGJ_EndingFinaleDirector");
+        DontDestroyOnLoad(go);
+        finaleDirector = go.AddComponent<EndingFinaleDirector>();
+
+        Debug.Log("[EndingSequencePlayer] 已自动创建终章演出导演（EndingFinaleDirector），使用默认配置：" +
+                  "枯萎关卡 Level2 / Final Scene / 两段左上角文字。想微调参数就在场景里放一个挂该组件的空物体。", go);
+
+        return finaleDirector;
+    }
+
     private IEnumerator SequenceRoutine()
     {
+        // ⓪ 终章实机演出（含一次跨场景运镜，演完画面保持全黑）
+        if (playFinaleBeforeSubtitles)
+            yield return RunFinalePrelude();
+
         ResolvePlayer();
         DisablePlayerInput();
 
@@ -162,7 +297,7 @@ public class EndingSequencePlayer : MonoBehaviour
                     continue;
                 }
 
-                SetSubtitle(line.text.Replace("\\n", "\n"));
+                SetSubtitle(line.text.Replace("\\n", "\n"), line.centered);
                 yield return FadeSubtitleAlphaRoutine(0f, 1f, subtitleFadeSeconds);
                 yield return new WaitForSecondsRealtime(Mathf.Max(0.2f, line.holdSeconds));
                 yield return FadeSubtitleAlphaRoutine(1f, 0f, subtitleFadeSeconds);
@@ -177,6 +312,9 @@ public class EndingSequencePlayer : MonoBehaviour
         if (creditsLines != null && creditsLines.Length > 0)
             yield return ScrollCreditsRoutine(creditsLines);
 
+        // 3.5 结尾图：淡入 → 停留 → 淡出（默认共 4 秒）→ 全部结束
+        yield return ShowEndingImageRoutine();
+
         // 4. 结束
         // 先记下“是否要回标题”，再触发 OnFinished：OnFinished 里挂的命令
         // 若把本物体销毁/切场景，也不会影响下面判断要走的回标题流程。
@@ -186,7 +324,9 @@ public class EndingSequencePlayer : MonoBehaviour
         if (autoReturn)
         {
             // 给 OnFinished 里挂的收尾提示 / 音效留一点黑屏演出时间，再整体清场回标题
-            yield return new WaitForSecondsRealtime(Mathf.Max(0f, returnDelaySeconds));
+            // （结尾图播完 = 演出到头了，不再多等，直接结束）
+            if (!endingImagePlayed)
+                yield return new WaitForSecondsRealtime(Mathf.Max(0f, returnDelaySeconds));
 
             isPlaying = false;
             // 清掉跨场景常驻对象并回标题（见 GameTitleRestart.cs 注释）；当前场景随后会被卸载
@@ -199,6 +339,7 @@ public class EndingSequencePlayer : MonoBehaviour
             yield return FadeBlackToRoutine(0f, fadeToBlackSeconds); // 黑幕淡出
             SetSubtitle(null);
             ClearCreditLines();
+            ClearEndingImage();
             if (canvas != null) canvas.gameObject.SetActive(false);
             RestorePlayerInput();
         }
@@ -243,6 +384,100 @@ public class EndingSequencePlayer : MonoBehaviour
             creditsWindow.anchoredPosition = new Vector2(0f, endTravel);
     }
 
+    // ---------------------------------------------------------------- 结尾图（报幕之后）
+
+    /// <summary>
+    /// 报幕滚完后的结尾图：淡入 → 停留 → 淡出（共 endingImageTotalSeconds 秒），整个结局到此为止。
+    /// 没配图时整段跳过（维持老行为）。
+    /// </summary>
+    private IEnumerator ShowEndingImageRoutine()
+    {
+        Sprite sprite = ResolveEndingImage();
+        if (sprite == null)
+            yield break;
+
+        EnsureEndingImageUi();
+        endingImagePlayed = true;
+        endingImageObject.sprite = sprite;
+
+        float total = Mathf.Max(0.2f, endingImageTotalSeconds);
+        float fade = Mathf.Clamp(endingImageFadeSeconds, 0.01f, total * 0.5f);
+        float hold = Mathf.Max(0f, total - fade * 2f);
+
+        yield return FadeEndingImageRoutine(0f, 1f, fade);
+
+        if (hold > 0f)
+            yield return new WaitForSecondsRealtime(hold);
+
+        yield return FadeEndingImageRoutine(1f, 0f, fade);
+    }
+
+    /// <summary>结尾图：Inspector 拖的 → Resources/GGJ_EndingCard（Sprite）→ Texture2D 现转 Sprite。</summary>
+    private Sprite ResolveEndingImage()
+    {
+        if (endingImage != null)
+            return endingImage;
+
+        Sprite sprite = Resources.Load<Sprite>("GGJ_EndingCard");
+        if (sprite != null)
+            return sprite;
+
+        Texture2D texture = Resources.Load<Texture2D>("GGJ_EndingCard");
+        if (texture != null)
+            return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height),
+                                 new Vector2(0.5f, 0.5f), 100f);
+
+        return null;
+    }
+
+    /// <summary>结尾图的 UI：全屏一张图（报幕滚完后淡入淡出）。</summary>
+    private void EnsureEndingImageUi()
+    {
+        if (endingImageObject != null)
+            return;
+
+        GameObject imageGO = CreateUiChild("EndingImage", canvasRT);
+        RectTransform imageRT = imageGO.GetComponent<RectTransform>();
+        StretchFull(imageRT);
+
+        endingImageObject = imageGO.AddComponent<Image>();
+        endingImageObject.color = new Color(1f, 1f, 1f, 0f);
+        endingImageObject.preserveAspect = true;
+        endingImageObject.raycastTarget = false;
+    }
+
+    private IEnumerator FadeEndingImageRoutine(float from, float to, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            SetEndingImageAlpha(Mathf.Lerp(from, to, Mathf.Clamp01(elapsed / duration)));
+            yield return null;
+        }
+        SetEndingImageAlpha(to);
+    }
+
+    private void SetEndingImageAlpha(float alpha)
+    {
+        if (endingImageObject == null)
+            return;
+
+        Color c = endingImageObject.color;
+        c.a = Mathf.Clamp01(alpha);
+        endingImageObject.color = c;
+    }
+
+    /// <summary>把结尾图收掉（只在“不回标题、不留在黑屏”的老行为里用）。</summary>
+    private void ClearEndingImage()
+    {
+        if (endingImageObject != null)
+        {
+            endingImageObject.sprite = null;
+            SetEndingImageAlpha(0f);
+        }
+    }
+
     // ---------------------------------------------------------------- UI 构建
 
     private void EnsureCanvas()
@@ -277,18 +512,19 @@ public class EndingSequencePlayer : MonoBehaviour
         // 字幕
         GameObject subtitleGO = CreateUiChild("Subtitle", canvasRT);
         RectTransform subtitleRT = subtitleGO.GetComponent<RectTransform>();
-        subtitleRT.anchorMin = new Vector2(0f, 0.35f);
-        subtitleRT.anchorMax = new Vector2(1f, 0.62f);
-        subtitleRT.offsetMin = Vector2.zero;
-        subtitleRT.offsetMax = Vector2.zero;
-        subtitleRT.pivot = new Vector2(0.5f, 0.5f);
+        // 左边、垂直居中（不再压在屏幕上半部分正中）
+        subtitleRT.anchorMin = new Vector2(0f, 0.4f);
+        subtitleRT.anchorMax = new Vector2(0f, 0.6f);
+        subtitleRT.pivot = new Vector2(0f, 0.5f);
+        subtitleRT.anchoredPosition = new Vector2(Mathf.Max(0f, subtitleLeftMargin), 0f);
+        subtitleRT.sizeDelta = new Vector2(Mathf.Max(200f, subtitleWidth), 0f);
 
         subtitleText = subtitleGO.AddComponent<Text>();
         subtitleText.font = GetDefaultFont();
         subtitleText.fontSize = (int)subtitleFontSize;
         subtitleText.fontStyle = FontStyle.Bold;
         subtitleText.color = subtitleColor;
-        subtitleText.alignment = TextAnchor.MiddleCenter;
+        subtitleText.alignment = TextAnchor.MiddleLeft;
         subtitleText.horizontalOverflow = HorizontalWrapMode.Wrap;
         subtitleText.verticalOverflow = VerticalWrapMode.Truncate;
         subtitleText.raycastTarget = false;
@@ -347,10 +583,12 @@ public class EndingSequencePlayer : MonoBehaviour
             creditsWindow.anchoredPosition = Vector2.zero;
     }
 
-    private void SetSubtitle(string content)
+    private void SetSubtitle(string content, bool centered = false)
     {
         if (subtitleText == null)
             return;
+
+        ApplySubtitleLayout(centered);
 
         bool visible = !string.IsNullOrEmpty(content);
         subtitleText.text = visible ? content : string.Empty;
@@ -364,6 +602,38 @@ public class EndingSequencePlayer : MonoBehaviour
             Color oc = subtitleOutline.effectColor;
             oc.a = visible ? 0.9f : 0f;
             subtitleOutline.effectColor = oc;
+        }
+    }
+
+    /// <summary>
+    /// 字幕摆放：centered = 屏幕正中间（居中对齐，整行宽度铺满屏幕）；
+    /// 否则 = 左边、垂直居中（用 subtitleLeftMargin / subtitleWidth）。
+    /// </summary>
+    private void ApplySubtitleLayout(bool centered)
+    {
+        if (subtitleText == null)
+            return;
+
+        RectTransform rt = subtitleText.rectTransform;
+
+        if (centered)
+        {
+            // 横向铺满、纵向占中间 20% → 文字正好落在屏幕正中央
+            rt.anchorMin = new Vector2(0f, 0.4f);
+            rt.anchorMax = new Vector2(1f, 0.6f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = Vector2.zero;
+            subtitleText.alignment = TextAnchor.MiddleCenter;
+        }
+        else
+        {
+            rt.anchorMin = new Vector2(0f, 0.4f);
+            rt.anchorMax = new Vector2(0f, 0.6f);
+            rt.pivot = new Vector2(0f, 0.5f);
+            rt.anchoredPosition = new Vector2(Mathf.Max(0f, subtitleLeftMargin), 0f);
+            rt.sizeDelta = new Vector2(Mathf.Max(200f, subtitleWidth), 0f);
+            subtitleText.alignment = TextAnchor.MiddleLeft;
         }
     }
 

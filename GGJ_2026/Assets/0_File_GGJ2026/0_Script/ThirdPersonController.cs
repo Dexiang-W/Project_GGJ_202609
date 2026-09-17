@@ -395,6 +395,11 @@ namespace StarterAssets
 
         private void Move()
         {
+            // 角色控制器被外部临时关掉时（结局演出把玩家藏起来、过场瞬移等）不要再驱动它，
+            // 否则每帧都会报 “CharacterController.Move called on inactive controller”。
+            if (_controller == null || !_controller.enabled)
+                return;
+
             bool freeMove = FreeMovementEnabled;
 
             // ----- 玩家的移动输入 -----

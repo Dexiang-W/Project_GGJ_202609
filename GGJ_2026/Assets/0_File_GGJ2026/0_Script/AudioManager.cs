@@ -95,6 +95,18 @@ public class AudioManager : MonoBehaviour
     [Tooltip("换关卡时环境音淡出 + 淡入的总时长")]
     public float ambienceFadeSeconds = 1f;
 
+    [Header("结局音乐（两个结局各自的 BGM）")]
+    [Tooltip("选择「隐瞒真相，继续试验」结局时循环播放（MUS_Ending_Overgrowth）。\n" +
+             "播出去之后主音乐通道会被“锁定”：结局期间切场景不会被关卡配乐顶掉，回到标题才解锁。")]
+    public AudioClip endingOvergrowthMusic;
+    [Tooltip("选择「揭露真相，停止实验」结局时循环播放（MUS_Ending_Natural）")]
+    public AudioClip endingNaturalMusic;
+    [Range(0f, 1f)]
+    [Tooltip("结局音乐音量")]
+    public float endingMusicVolume = 0.4f;
+    [Tooltip("结局音乐淡入时长（秒）")]
+    public float endingMusicFadeSeconds = 2.5f;
+
     [Header("一次性玩法音效")]
     [Tooltip("触碰 energyPoint：SFX_Energy_Pickup")]
     public AudioClip pickupClip;
@@ -149,6 +161,9 @@ public class AudioManager : MonoBehaviour
     private bool levelAudioStarted;
     private Coroutine musicFadeRoutine;
     private Coroutine ambienceFadeRoutine;
+
+    /// <summary>结局音乐锁定中：切场景不再换主 BGM（环境音照常），回标题才解锁。</summary>
+    private bool endingMusicLocked;
     private int lastFootstepIndex = -1;
     private int lastJumpIndex = -1;
     private int lastLandIndex = -1;
@@ -273,23 +288,68 @@ public class AudioManager : MonoBehaviour
         return true;
     }
 
+    // ---------------------------------------------------------------- 结局音乐
+
+    /// <summary>
+    /// 播「隐瞒真相，继续试验」结局音乐（MUS_Ending_Overgrowth）并锁定主音乐通道：
+    /// 之后结局演出里切场景不会再被关卡配乐顶掉，回到标题才解锁。
+    /// </summary>
+    public static void PlayEndingOvergrowthMusic()
+    {
+        EnsureCreated();
+        if (Instance != null)
+            Instance.StartEndingMusic(Instance.endingOvergrowthMusic, "MUS_Ending_Overgrowth");
+    }
+
+    /// <summary>播「揭露真相，停止实验」结局音乐（MUS_Ending_Natural），规则同上。</summary>
+    public static void PlayEndingNaturalMusic()
+    {
+        EnsureCreated();
+        if (Instance != null)
+            Instance.StartEndingMusic(Instance.endingNaturalMusic, "MUS_Ending_Natural");
+    }
+
+    private void StartEndingMusic(AudioClip clip, string clipName)
+    {
+        if (clip == null)
+        {
+            Debug.LogWarning($"[AudioManager] 结局音乐 {clipName} 还没接上。" +
+                             "请执行菜单 GGJ2026/音频/重建音频管理预制体（自动接入素材），或打开预制体手动把它拖进去。");
+            return;
+        }
+
+        endingMusicLocked = true;
+        SetMusic(clip, endingMusicVolume, musicFadeSeconds, endingMusicFadeSeconds);
+    }
+
     // ---------------------------------------------------------------- 关卡配乐表
 
     /// <summary>按场景名应用配乐：优先查表，查不到回退默认字段。</summary>
     private void ApplySceneProfile(string sceneName)
     {
+        // 回到标题 = 结局结束：解除结局音乐锁定，恢复按关卡配乐表走
+        if (sceneName == "Begin_Menu")
+            endingMusicLocked = false;
+
         SceneAudioProfile profile = FindProfile(sceneName);
 
         if (profile != null)
         {
-            float fadeOut = profile.musicFadeOutSeconds >= 0f ? profile.musicFadeOutSeconds : musicFadeSeconds;
-            float fadeIn = profile.musicFadeInSeconds >= 0f ? profile.musicFadeInSeconds : musicFadeInSeconds;
-            SetMusic(profile.musicClip, profile.musicVolume, fadeOut, fadeIn);
+            // 结局音乐锁定期间不换主 BGM（环境音照常换）
+            if (!endingMusicLocked)
+            {
+                float fadeOut = profile.musicFadeOutSeconds >= 0f ? profile.musicFadeOutSeconds : musicFadeSeconds;
+                float fadeIn = profile.musicFadeInSeconds >= 0f ? profile.musicFadeInSeconds : musicFadeInSeconds;
+                SetMusic(profile.musicClip, profile.musicVolume, fadeOut, fadeIn);
+            }
+
             SetAmbience(profile.ambienceClip, profile.ambienceVolume);
         }
         else
         {
-            SetMusic(musicClip, musicVolume, musicFadeSeconds, musicFadeInSeconds);
+            if (!endingMusicLocked)
+                SetMusic(musicClip, musicVolume, musicFadeSeconds, musicFadeInSeconds);
+
             bool allowDefaultAmbience = sceneName == ambienceSceneName;
             SetAmbience(allowDefaultAmbience ? ambienceClip : null, ambienceVolume);
         }

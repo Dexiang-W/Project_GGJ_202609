@@ -30,6 +30,13 @@ public static class RespawnFlow
     /// <summary>当前是否有一套复活流程正在跑（黑幕 / 传送 / 文字停留都算）。</summary>
     public static bool IsRunning => running;
 
+    /// <summary>
+    /// 演出总闸（结局导演用）：置 true 之后，所有复活流程（死亡区 / 危险货物 / 其它）一律不启动。
+    /// 例如“放弃实验”结局里玩家要在关卡里自动走完全程，路过死亡区时不该被传送、也不该弹死亡文字。
+    /// 演出结束后一定要设回 false。
+    /// </summary>
+    public static bool Suppressed { get; set; }
+
     /// <summary>是否处于“不该触发新复活”的状态：流程正在跑，或刚复活完的免疫期内。</summary>
     public static bool IsProtected => running || Time.unscaledTime < graceUntil;
 
@@ -41,6 +48,10 @@ public static class RespawnFlow
     {
         get
         {
+            // 演出期间（结局导演会置位）：一律不许复活
+            if (Suppressed)
+                return false;
+
             if (IsProtected)
                 return false;
 
@@ -138,6 +149,7 @@ public static class RespawnFlow
         running = false;
         graceSeconds = DefaultGraceSeconds;
         graceUntil = 0f;
+        Suppressed = false;
 
         SceneManager.sceneLoaded -= OnSceneLoaded;
         SceneManager.sceneLoaded += OnSceneLoaded;
