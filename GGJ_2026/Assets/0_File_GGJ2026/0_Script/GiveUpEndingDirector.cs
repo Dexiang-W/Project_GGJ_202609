@@ -45,8 +45,10 @@ public class GiveUpEndingDirector : MonoBehaviour
 
         [Tooltip("出生点物体名：该场景里的空对象（本项目统一叫 1Point）")]
         public string startPointName = "1Point";
-        [Tooltip("找不到上面那个名字时的兜底名字（可以填多个，从前往后找）")]
-        public string[] startPointFallbacks = { "StartPoint", "SpawnPoint" };
+        [Tooltip("找不到上面那个名字时的兜底名字（可以填多个，从前往后找）。\n" +
+                 "顺序很重要：SpawnPoint 是本作真正的玩家出生点（LevelTransitionZone / GameFlowController 都用它），\n" +
+                 "StartPoint 在某些关卡里是【管道刷怪点】（Level3+4 的那个在关卡下方几十米），不能优先用。")]
+        public string[] startPointFallbacks = { "SpawnPoint", "StartPoint", "Spawn" };
 
         [Header("走到哪儿")]
         [Tooltip("终点物体名：填了就一路走到这个点（如 Level1 的 FinalPoint）；\n" +
@@ -104,7 +106,7 @@ public class GiveUpEndingDirector : MonoBehaviour
         {
             sceneName = "Level3+4",
             startPointName = "1Point",
-            startPointFallbacks = new[] { "StartPoint", "SpawnPoint" },
+            startPointFallbacks = new[] { "SpawnPoint", "StartPoint", "Spawn" },
             endPointName = "",
             walkDirection = 1f,
             walkSeconds = 5.5f,
@@ -117,10 +119,36 @@ public class GiveUpEndingDirector : MonoBehaviour
         },
     };
 
+    [Header("①·0 出生点覆盖（想换「揭露真相」结局的出生地，用这里）")]
+    [Tooltip("想换地方时：打开 Level3+4 场景，在想要的位置摆一个空物体（建议命名 EndingSpawnPoint），\n" +
+             "把它的名字填到下面的 Custom Spawn Point Name，再勾选 Use Custom Spawn Point。\n" +
+             "结局开走的那一刻，人就会从这个位置出现（Z 会按 Snap Point Z To Zero 拉回 0）。")]
+    [SerializeField] private bool useCustomSpawnPoint = false;
+    [Tooltip("自定义出生点的名字（在结局所在的 Level3+4 场景里找这个物体）。默认 EndingSpawnPoint")]
+    [SerializeField] private string customSpawnPointName = "EndingSpawnPoint";
+    [Tooltip("方式二（可选）：如果本组件恰好挂在 Level3+4 场景里的物体上，可以直接把场景里的空物体拖进来。\n" +
+             "引用优先于名字；结局演出时场景已切走，常驻体上这个引用通常是拖不到的，用名字方式即可。")]
+    [SerializeField] private Transform customSpawnPointOverride;
+
     [Header("② 黑幕节奏（秒）")]
     [Tooltip("本作所有关卡都在 Z=0 的平面上演出。勾选后：摆人时把出生点 / 终点的 Z 一律拉回 0，\n" +
              "免得在场景里拖点时手抖偏了一点 Z，人就跑到布景前面 / 后面去了。")]
     [SerializeField] private bool snapPointZToZero = true;
+
+    [Header("②·1 出生点校验（防止人被摆到关卡外面掉下去）")]
+    [Tooltip("勾选 = 摆人前往候选出生点脚下探一下地面：脚下没有地面就换下一个候选名字。\n" +
+             "必须开：Level3+4 里那个叫 StartPoint 的物体其实是【管道刷怪点】，在关卡下方几十米处，\n" +
+             "不校验的话人一被摆过去就直接掉出关卡（选「揭露真相」之后掉下去就是这个原因）。")]
+    [SerializeField] private bool validateStartPoint = true;
+    [Tooltip("探地深度（米）：往下这么深都没碰到地面就算“悬空”，换下一个候选出生点")]
+    [SerializeField] private float groundProbeDistance = 12f;
+    [Tooltip("探地时从出生点上方多高的地方往下打（出生点贴着地面时也投得出来）")]
+    [SerializeField] private float groundProbeHeight = 1.5f;
+    [Tooltip("摆人时脚底离地面留多少米：贴着地面摆，人不会一出场就往下坠一小段")]
+    [SerializeField] private float groundSnapOffset = 0.05f;
+    [Tooltip("探地用的层（默认全部层；触发器和玩家自己会自动忽略）")]
+    [SerializeField] private LayerMask groundProbeLayers = ~0;
+
     [Tooltip("渐黑：走路还没停就开始变黑，所以这一段人一直在走")]
     [SerializeField] private float fadeToBlackSeconds = 1.0f;
     [Tooltip("渐亮：人跟着画面一起亮出来（边亮边走）")]
@@ -211,6 +239,12 @@ public class GiveUpEndingDirector : MonoBehaviour
              "所以只停脚本挡不住死亡区 / 关卡传送区 / 能量球拾取 —— 人一走进去照样被传走、照样弹死亡文字。\n" +
              "只关触发器：地面 / 墙这些实体碰撞保留，人还是踩在地上、撞得到墙。")]
     [SerializeField] private bool disableTriggerColliders = true;
+
+    [Tooltip("勾选（默认）= 结局演出里把本场景所有【可交互物】整个隐藏掉：能量球、报纸、便签、书……\n" +
+             "以前只停脚本 / 关触发器，东西本身还留在画面里，演出里不该再看到它们。\n" +
+             "只认“带交互组件”的物体；地形 / 建筑 / 布景 / 玩家 / 相机 / HUD 一律不动。")]
+    [SerializeField] private bool hideInteractiveProps = true;
+
     [Tooltip("例外：这些组件不停用（直接把场景里的组件拖进来）")]
     [SerializeField] private MonoBehaviour[] keepEnabledBehaviours;
     [Tooltip("例外：这些类型不停用（填类型名，支持 * 通配，例如 UniversalAdditional*）")]
@@ -229,7 +263,6 @@ public class GiveUpEndingDirector : MonoBehaviour
     private ThirdPersonController player;
     private Camera mainCamera;
     private CameraFollowController camFollow;
-    private CharacterController charController;
 
     /// <summary>能量球“挂载点”：跟着玩家走（漂浮 / 自转的球挂在它下面）。</summary>
     private GameObject energyBall;
@@ -304,6 +337,8 @@ public class GiveUpEndingDirector : MonoBehaviour
         MessageTriggerZone.SuppressMessages = true;
         // 演出全程禁止一切复活流程：死亡区 / 危险货物再也不能把正在走的人传走、也不能弹死亡文字
         RespawnFlow.Suppressed = true;
+        // 演出期间禁止“花周围的暗角后处理”（退场 / 走位时不该泛红）
+        LightFlowerDrainZone.SuppressVignette = true;
         GameplayHUD.SetGameplayUiVisibleIfExists(false);
         DisablePlayerInput();
         MakePersistent(player.transform.root);
@@ -341,6 +376,7 @@ public class GiveUpEndingDirector : MonoBehaviour
             CameraTriggerVolume.SuppressCameraSwitching = false;
             MessageTriggerZone.SuppressMessages = false;
             RespawnFlow.Suppressed = false;
+            LightFlowerDrainZone.SuppressVignette = false;
             InteractableObject.SuppressInteractionInput = previousSuppress;
             IsRunning = false;
         }
@@ -391,7 +427,7 @@ public class GiveUpEndingDirector : MonoBehaviour
             yield return new WaitForSecondsRealtime(blackHoldSeconds);
 
         // —— 摆人 ——
-        Transform start = FindPoint(stage.startPointName, stage.startPointFallbacks);
+        Transform start = ResolveSpawnPoint(stage);
         if (start == null)
         {
             Debug.LogWarning($"[GiveUpEndingDirector] 场景 “{stage.sceneName}” 里没找到出生点 " +
@@ -900,9 +936,6 @@ public class GiveUpEndingDirector : MonoBehaviour
             player = ThirdPersonController.Instance;
         if (player == null)
             player = FindObjectOfType<ThirdPersonController>();
-
-        if (player != null)
-            charController = player.GetComponent<CharacterController>();
     }
 
     private void ResolveCamera()
@@ -944,25 +977,45 @@ public class GiveUpEndingDirector : MonoBehaviour
             return;
 
         // 角色每帧把朝向写成 Euler(0, yaw, roll)，这里摆一次同样的朝向：往右走时面朝右
-        float characterRoll = player.InvertGravity ? 180f : 0f;
         float yaw = direction >= 0f ? player.RightFacingAngle : player.LeftFacingAngle;
 
-        if (charController != null)
-            charController.enabled = false;
-
-        if (point != null)
+        if (point == null)
+        {
+            // 没找到出生点：位置不动，只把朝向摆正、清掉运动残留
+            player.RespawnAt(player.transform.position, yaw);
+        }
+        else
         {
             Vector3 target = point.position;
             if (snapPointZToZero)
                 target.z = 0f;
 
-            player.transform.position = target;
+            if (validateStartPoint)
+            {
+                Vector3 up = player.InvertGravity ? Vector3.down : Vector3.up;
+
+                // 贴着地面摆：出生点悬空 / 被摆在关卡外面时，直接落到它脚下那块地面上，
+                // 人不会一出场就往下坠（也不会因为出生点高了半米而“掉”一小段）
+                if (HasGroundBelow(target, out Vector3 ground))
+                {
+                    target.y = (ground + up * Mathf.Max(0f, groundSnapOffset)).y;
+                }
+                else if (snapPointZToZero && HasGroundBelow(point.position, out Vector3 groundAtOwnZ))
+                {
+                    // Z 被拉回 0 之后脚下反而悬空了（关卡不一定严格压在 Z=0 平面上）：
+                    // 那就用出生点原本的 Z，起码人是站在地上的
+                    Debug.LogWarning($"[GiveUpEndingDirector] 出生点 “{point.name}” 把 Z 拉回 0 后脚下悬空，" +
+                                     "改用它原本的 Z。", this);
+
+                    target = point.position;
+                    target.y = (groundAtOwnZ + up * Mathf.Max(0f, groundSnapOffset)).y;
+                }
+            }
+
+            // RespawnAt = 瞬移 + 站直 + 清空速度 / 动画 / 输入残留。
+            // 比自己摆 transform 干净：上一段走下来的惯性、坠落姿势、残余下落速度都不会带进新场景。
+            player.RespawnAt(target, yaw);
         }
-
-        player.transform.rotation = Quaternion.Euler(0f, yaw, characterRoll);
-
-        if (charController != null)
-            charController.enabled = true;
 
         StarterAssetsInputs inputs = player.GetComponent<StarterAssetsInputs>();
         if (inputs != null)
@@ -1196,53 +1249,154 @@ public class GiveUpEndingDirector : MonoBehaviour
         return Mathf.Sqrt(dx * dx + dz * dz);
     }
 
-    /// <summary>按名字找点：先找出生点，再依次找兜底名字（支持嵌套子物体）。</summary>
-    private static Transform FindPoint(string name, string[] fallbacks)
+    /// <summary>
+    /// 出生点解析：
+    /// 启用「出生点覆盖」→ 优先用拖进来的引用，其次在结局场景里按 Custom Spawn Point Name 找那个空物体；
+    /// 都没找到 → 回退按每段的候选名字自动找（带探地校验）。
+    /// </summary>
+    private Transform ResolveSpawnPoint(WalkStage stage)
     {
-        Transform found = FindByName(name);
-        if (found != null)
-            return found;
+        if (useCustomSpawnPoint)
+        {
+            Transform custom = customSpawnPointOverride;
+            if (custom == null && !string.IsNullOrEmpty(customSpawnPointName))
+                custom = FindPoint(customSpawnPointName, null);
+
+            if (custom != null)
+            {
+                Debug.Log($"[GiveUpEndingDirector] 使用自定义出生点 “{custom.name}” {custom.position}" +
+                          (snapPointZToZero ? "（Z 会在摆人时拉回 0）" : "") + "。", this);
+                return custom;
+            }
+
+            Debug.LogWarning($"[GiveUpEndingDirector] 启用了自定义出生点，但没找到它" +
+                             $"（引用为空，且场景里没有叫 “{customSpawnPointName}” 的物体）——回退按候选名字自动找。", this);
+        }
+
+        return FindPoint(stage.startPointName, stage.startPointFallbacks);
+    }
+
+#if UNITY_EDITOR
+    /// <summary>拖了自定义出生点引用时，在场景视图画个金色标记，方便确认位置。</summary>
+    private void OnDrawGizmos()
+    {
+        if (useCustomSpawnPoint && customSpawnPointOverride != null)
+        {
+            Gizmos.color = new Color(1f, 0.8f, 0f, 1f);
+            Gizmos.DrawWireSphere(customSpawnPointOverride.position, 0.6f);
+            Gizmos.DrawLine(customSpawnPointOverride.position,
+                            customSpawnPointOverride.position + Vector3.up * 2f);
+        }
+    }
+#endif
+
+    /// <summary>
+    /// 按名字找点：依次试「本名 → 兜底名」，同名物体可能有好几个，
+    /// 按“像不像关卡出生点”排序后逐个校验，取第一个【脚下真的有地面】的。
+    ///
+    /// 为什么要校验：Level3+4 里叫 StartPoint 的是管道刷怪点（在关卡下方几十米），
+    /// 不校验就会把玩家摆过去 —— 人当场掉出关卡（选「揭露真相」之后掉下去就是这个原因）。
+    /// </summary>
+    private Transform FindPoint(string name, string[] fallbacks)
+    {
+        List<string> names = new List<string>();
+        if (!string.IsNullOrEmpty(name))
+            names.Add(name);
 
         if (fallbacks != null)
         {
             foreach (string fallback in fallbacks)
             {
-                found = FindByName(fallback);
-                if (found != null)
-                    return found;
+                if (!string.IsNullOrEmpty(fallback) && !names.Contains(fallback))
+                    names.Add(fallback);
             }
         }
 
-        return null;
+        Transform first = null;
+
+        foreach (string candidate in names)
+        {
+            foreach (Transform found in FindAllByName(candidate))
+            {
+                if (found == null)
+                    continue;
+
+                if (first == null)
+                    first = found;
+
+                if (!validateStartPoint)
+                    return found;
+
+                if (HasGroundBelow(found.position, out _))
+                    return found;
+
+                Debug.LogWarning($"[GiveUpEndingDirector] 出生点 “{found.name}”（{found.position}）" +
+                                 "脚下探不到地面（多半是刷怪点 / 关卡外的标记），换下一个候选点。", this);
+            }
+        }
+
+        if (first != null && validateStartPoint)
+        {
+            Debug.LogWarning($"[GiveUpEndingDirector] 所有候选出生点脚下都没有地面，仍然用第一个 " +
+                             $"“{first.name}”（{first.position}）—— 建议在场景里摆一个站在地面上的出生点。", this);
+        }
+
+        return first;
     }
 
-    private static Transform FindByName(string name)
+    /// <summary>
+    /// 按名字列出所有同名物体，按“像不像关卡出生点”排序：
+    /// ① 场景根上的（Level1 / Level2 的 1Point 就是这种）
+    /// ② 根物体的直接子物体（LevelTransitionZone 找 SpawnPoint 也是这个规则）
+    /// ③ 藏在子孙物体 / 预制体里的标记（管道刷怪点、货物生成点通常藏在这一层）
+    /// </summary>
+    private static IEnumerable<Transform> FindAllByName(string name)
     {
         if (string.IsNullOrEmpty(name))
-            return null;
+            yield break;
 
         Scene scene = SceneManager.GetActiveScene();
-        if (!scene.IsValid() || !scene.isLoaded)
-            return null;
-
-        foreach (GameObject root in scene.GetRootGameObjects())
+        if (scene.IsValid() && scene.isLoaded)
         {
-            if (root == null)
-                continue;
+            List<Transform> roots = new List<Transform>();
+            List<Transform> directChildren = new List<Transform>();
+            List<Transform> nested = new List<Transform>();
 
-            if (root.name == name)
-                return root.transform;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root == null)
+                    continue;
 
-            Transform found = FindDeep(root.transform, name);
-            if (found != null)
-                return found;
+                if (root.name == name)
+                    roots.Add(root.transform);
+
+                Transform direct = root.transform.Find(name);
+                if (direct != null)
+                    directChildren.Add(direct);
+
+                CollectDeep(root.transform, name, nested);
+            }
+
+            // 先整层“场景根上的”，再整层“根的直接子物体”，最后才是藏在深处的标记
+            foreach (Transform found in roots)
+                yield return found;
+
+            foreach (Transform found in directChildren)
+                yield return found;
+
+            foreach (Transform found in nested)
+            {
+                if (found != null)
+                    yield return found;
+            }
         }
 
         GameObject global = GameObject.Find(name);
-        return global != null ? global.transform : null;
+        if (global != null)
+            yield return global.transform;
     }
 
-    private static Transform FindDeep(Transform parent, string name)
+    private static void CollectDeep(Transform parent, string name, List<Transform> result)
     {
         foreach (Transform child in parent)
         {
@@ -1250,14 +1404,45 @@ public class GiveUpEndingDirector : MonoBehaviour
                 continue;
 
             if (child.name == name)
-                return child;
+                result.Add(child);
 
-            Transform found = FindDeep(child, name);
-            if (found != null)
-                return found;
+            CollectDeep(child, name, result);
+        }
+    }
+
+    /// <summary>
+    /// 往脚下打一条射线探地面：探到了返回 true，并把落点写进 <paramref name="groundPoint"/>
+    /// （已经贴着地面，摆人时直接用它的高度即可）。
+    /// 触发器不算地面；打到玩家自己（常驻角色 / 残留角色）也不算。
+    /// </summary>
+    private bool HasGroundBelow(Vector3 position, out Vector3 groundPoint)
+    {
+        groundPoint = position;
+
+        Vector3 up = player != null ? (player.InvertGravity ? Vector3.down : Vector3.up) : Vector3.up;
+        float above = Mathf.Max(0f, groundProbeHeight);
+        float maxDistance = above + Mathf.Max(0.1f, groundProbeDistance);
+
+        RaycastHit[] hits = Physics.RaycastAll(position + up * above, -up, maxDistance,
+            groundProbeLayers, QueryTriggerInteraction.Ignore);
+        if (hits == null || hits.Length == 0)
+            return false;
+
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider == null)
+                continue;
+
+            if (player != null && hit.collider.transform.root == player.transform.root)
+                continue;
+
+            groundPoint = hit.point;
+            return true;
         }
 
-        return null;
+        return false;
     }
 
     /// <summary>停用“不是当前操作玩家”的其他玩家（目标场景自带的）。</summary>
@@ -1301,7 +1486,7 @@ public class GiveUpEndingDirector : MonoBehaviour
     /// </summary>
     private void DisableSceneMechanics()
     {
-        if (!disableSceneMechanics && !disableTriggerColliders)
+        if (!disableSceneMechanics && !disableTriggerColliders && !hideInteractiveProps)
             return;
 
         Scene scene = SceneManager.GetActiveScene();
@@ -1392,8 +1577,66 @@ public class GiveUpEndingDirector : MonoBehaviour
             }
         }
 
+        if (hideInteractiveProps)
+            HideInteractivePropsInScene(keepRoots);
+
         Debug.Log($"[GiveUpEndingDirector] 场景 “{scene.name}” 里已停用 {disabledCount} 个脚本、" +
                   $"{disabledTriggers} 个触发器碰撞体，现在只剩“玩家自动走 + 镜头跟随”。", this);
+    }
+
+    /// <summary>
+    /// 结局演出里把当前场景所有【可交互物】整个隐藏掉：能量球、报纸、便签、书……
+    /// 停脚本 / 关触发器只会让它们“用不了”，画面上还在；这里直接把它们从画面里拿掉。
+    /// 只认带交互组件的物体，地形 / 建筑 / 布景 / 玩家 / 相机 / HUD 一律不动。
+    /// </summary>
+    public static int HideInteractivePropsInScene(HashSet<Transform> keepRoots)
+    {
+        Scene scene = SceneManager.GetActiveScene();
+        if (!scene.IsValid() || !scene.isLoaded)
+            return 0;
+
+        int hidden = 0;
+
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            if (root == null)
+                continue;
+
+            foreach (MonoBehaviour behaviour in root.GetComponentsInChildren<MonoBehaviour>(true))
+            {
+                if (behaviour == null || !IsInteractiveProp(behaviour))
+                    continue;
+
+                Transform propRoot = behaviour.transform.root;
+                if (propRoot != null && keepRoots != null && keepRoots.Contains(propRoot))
+                    continue;
+
+                GameObject prop = behaviour.gameObject;
+                if (prop == null || !prop.activeSelf)
+                    continue;
+
+                prop.SetActive(false);
+                hidden++;
+            }
+        }
+
+        if (hidden > 0)
+            Debug.Log($"[结局演出] 场景 “{scene.name}” 里已隐藏 {hidden} 个可交互物（能量球 / 报纸 / 便签 ……）。");
+
+        return hidden;
+    }
+
+    /// <summary>是不是“可交互物”身上的组件：能量球拾取、报纸 / 便签 / 书，以及名字里带 Interact / Pickup 的。</summary>
+    private static bool IsInteractiveProp(MonoBehaviour behaviour)
+    {
+        if (behaviour is InteractableObject || behaviour is GGJInteractableBase || behaviour is EnergyPickup)
+            return true;
+
+        string typeName = behaviour.GetType().Name;
+
+        return typeName.IndexOf("Interact", StringComparison.OrdinalIgnoreCase) >= 0
+            || typeName.IndexOf("Pickup", StringComparison.OrdinalIgnoreCase) >= 0
+            || typeName.IndexOf("EnergyBall", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private static bool ShouldKeepType(MonoBehaviour behaviour, List<Regex> keepPatterns)

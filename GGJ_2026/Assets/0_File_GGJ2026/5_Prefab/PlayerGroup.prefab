@@ -78,6 +78,7 @@ GameObject:
   - component: {fileID: 2021054125920247535}
   - component: {fileID: 5494965974698125411}
   - component: {fileID: 5197833105556882077}
+  - component: {fileID: 7181304719847638924}
   m_Layer: 8
   m_Name: Player
   m_TagString: Player
@@ -99,8 +100,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4474975395440905539}
-  - {fileID: 920000000000000002}
-
+  - {fileID: 814806686809286634}
   m_Father: {fileID: 3425480648518983487}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &3262762428934796511
@@ -113,7 +113,7 @@ Animator:
   m_GameObject: {fileID: 8136972482338599967}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: c678e6c5b24fe0a4f8935cc3c066b4a6, type: 3}
-  m_Controller: {fileID: 9100000, guid: 40db3173a05ae3242b1c182a09b0a183, type: 2}
+  m_Controller: {fileID: 9100000, guid: 8c6d604d10c166b4a8af31c1bcbb8adf, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -168,6 +168,11 @@ MonoBehaviour:
   SprintSpeed: 5.335
   RotationSmoothTime: 0.12
   SpeedChangeRate: 10
+  maxStamina: 100
+  sprintStaminaDrainPerSecond: 22
+  staminaRegenDelaySeconds: 0.8
+  staminaRegenPerSecond: 28
+  staminaRestartThreshold: 35
   LandingAudioClip: {fileID: 8300000, guid: ff697d3070687ce4583faa0561a145a2, type: 3}
   FootstepAudioClips: []
   FootstepAudioVolume: 0.3
@@ -255,12 +260,28 @@ MonoBehaviour:
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
---- !u!1 &920000000000000003 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: c678e6c5b24fe0a4f8935cc3c066b4a6,
-    type: 3}
-  m_PrefabInstance: {fileID: 920000000000000001}
+--- !u!114 &7181304719847638924
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8136972482338599967}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db266305e6e36104081c41dde726c55e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ReachClip: {fileID: 8815911461887091505, guid: 52f9dc6427868e541a24133aaf200f47,
+    type: 3}
+  ReachTriggerName: Reach
+  SpeedParameterName: Speed
+  ListenEAndQ: 1
+  SkipWhenMoving: 1
+  MovingSpeedThreshold: 0.15
+  RetriggerLock: 0.12
+  IgnoreWhenPaused: 1
+  DebugLog: 0
 --- !u!1001 &920000000000000001
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -324,12 +345,49 @@ PrefabInstance:
       propertyPath: m_Name
       value: lyq_rig_char
       objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: c678e6c5b24fe0a4f8935cc3c066b4a6,
+        type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 8c6d604d10c166b4a8af31c1bcbb8adf, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c678e6c5b24fe0a4f8935cc3c066b4a6,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6939415208257428087}
   m_SourcePrefab: {fileID: 100100000, guid: c678e6c5b24fe0a4f8935cc3c066b4a6, type: 3}
---- !u!4 &920000000000000002 stripped
+--- !u!1 &1432602671136080 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: c678e6c5b24fe0a4f8935cc3c066b4a6,
+    type: 3}
+  m_PrefabInstance: {fileID: 920000000000000001}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &6939415208257428087
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1432602671136080}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db266305e6e36104081c41dde726c55e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ReachClip: {fileID: 8815911461887091505, guid: 52f9dc6427868e541a24133aaf200f47,
+    type: 3}
+  ReachTriggerName: Reach
+  SpeedParameterName: Speed
+  ListenEAndQ: 1
+  SkipWhenMoving: 1
+  MovingSpeedThreshold: 0.15
+  RetriggerLock: 0.12
+  IgnoreWhenPaused: 1
+  DebugLog: 0
+--- !u!4 &814806686809286634 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: c678e6c5b24fe0a4f8935cc3c066b4a6,
     type: 3}

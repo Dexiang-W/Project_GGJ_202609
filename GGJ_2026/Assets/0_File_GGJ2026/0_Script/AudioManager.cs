@@ -95,6 +95,20 @@ public class AudioManager : MonoBehaviour
     [Tooltip("换关卡时环境音淡出 + 淡入的总时长")]
     public float ambienceFadeSeconds = 1f;
 
+    [Header("主音乐无缝循环（解决接缝“断一下”）")]
+    [Tooltip("勾选（默认）= 主音乐改用【双音源交叉淡化】循环：\n" +
+             "曲子尾巴淡出的同时，下一轮开头淡入并叠在一起，接缝处听不到“突然消失、突然开始”。\n" +
+             "取消勾选 = 回到 Unity 自带的 loop（素材怎么导进去就怎么响，接缝由素材本身决定）。")]
+    public bool seamlessMusicLoop = true;
+
+    [Tooltip("重叠时长（秒）：曲尾淡出 / 曲头淡入的长度。默认 2.5 秒左右最自然，太短会听出接缝。")]
+    public float musicCrossfadeSeconds = 2.5f;
+
+    [Tooltip("素材结尾【跳过不播】的长度（秒）—— 就是 mp3 结尾那段“越来越没声音”的部分。\n" +
+             "循环点会落在这段之前，所以循环里永远不会听到那截没声音的尾巴。\n" +
+             "听着还有静音尾巴就往上加（0.8 → 1.5 → 2）。")]
+    public float musicTailTrimSeconds = 0.8f;
+
     [Header("结局音乐（两个结局各自的 BGM）")]
     [Tooltip("选择「隐瞒真相，继续试验」结局时循环播放（MUS_Ending_Overgrowth）。\n" +
              "播出去之后主音乐通道会被“锁定”：结局期间切场景不会被关卡配乐顶掉，回到标题才解锁。")]
@@ -155,6 +169,8 @@ public class AudioManager : MonoBehaviour
 
     // 三个独立音源：音乐 / 环境音 / 一次性音效
     private AudioSource musicSource;
+    private AudioSource musicSourceB;
+    private MusicLoopCrossfade musicLoop;
     private AudioSource ambienceSource;
     private AudioSource sfxSource;
 
@@ -379,7 +395,27 @@ public class AudioManager : MonoBehaviour
         if (musicFadeRoutine != null)
             StopCoroutine(musicFadeRoutine);
 
+        // 无缝循环模式：交给双音源交叉淡化播放器（淡出的同时淡入，接缝不再“断一下”）
+        if (seamlessMusicLoop && EnsureMusicLoopPlayer())
+        {
+            musicFadeRoutine = StartCoroutine(SwitchMusicSeamlessRoutine(clip, targetVolume, fadeOutSeconds, fadeInSeconds));
+            return;
+        }
+
         musicFadeRoutine = StartCoroutine(SwitchSourceRoutine(musicSource, clip, targetVolume, fadeOutSeconds, fadeInSeconds, true, () => musicFadeRoutine = null));
+    }
+
+    /// <summary>换曲交给无缝循环播放器：旧曲淡出停掉 → 新曲淡入起循环。</summary>
+    private System.Collections.IEnumerator SwitchMusicSeamlessRoutine(
+        AudioClip clip, float targetVolume, float fadeOutSeconds, float fadeInSeconds)
+    {
+        if (musicLoop.IsPlaying && musicLoop.Clip != clip)
+            yield return musicLoop.FadeOutAndStopRoutine(Mathf.Max(0.001f, fadeOutSeconds));
+
+        if (clip != null)
+            yield return musicLoop.PlayRoutine(clip, targetVolume, fadeInSeconds);
+
+        musicFadeRoutine = null;
     }
 
     /// <summary>平滑切到某条环境音；clip 为 null 表示该关不需要环境音（淡出并停掉）。</summary>
@@ -519,8 +555,32 @@ public class AudioManager : MonoBehaviour
 
         // priority：数值越小越优先，保证一次性音效在声源紧张时也不会被音乐/环境音挤掉
         musicSource    = CreateSource("Music_Source", 128, musicVolume);
+        musicSourceB   = CreateSource("Music_Source_B", 128, musicVolume);
         ambienceSource = CreateSource("Ambience_Source", 160, ambienceVolume);
         sfxSource      = CreateSource("Sfx_Source", 0, sfxVolume);
+
+        if (seamlessMusicLoop)
+            EnsureMusicLoopPlayer();
+    }
+
+    /// <summary>
+    /// 准备好无缝循环播放器：把两个音乐通道交给它，并把 Director 里的参数（重叠 / 尾部跳过）同步过去。
+    /// </summary>
+    private bool EnsureMusicLoopPlayer()
+    {
+        if (musicSource == null || musicSourceB == null)
+            return false;
+
+        if (musicLoop == null)
+            musicLoop = GetComponent<MusicLoopCrossfade>();
+        if (musicLoop == null)
+            musicLoop = gameObject.AddComponent<MusicLoopCrossfade>();
+        if (musicLoop == null)
+            return false;
+
+        musicLoop.Setup(musicSource, musicSourceB);
+        musicLoop.ApplySettings(musicCrossfadeSeconds, musicTailTrimSeconds);
+        return true;
     }
 
     private AudioSource CreateSource(string childName, int priority, float volume)

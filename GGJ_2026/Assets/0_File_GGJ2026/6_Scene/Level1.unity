@@ -2492,6 +2492,7 @@ MonoBehaviour:
   useSpawnFacing: 1
   oneShot: 0
   cleanupExtraPlayers: 1
+  spawnGraceSeconds: 1.5
 --- !u!65 &142822413
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -34398,6 +34399,16 @@ PrefabInstance:
       propertyPath: m_Name
       value: P_Paper
       objectReference: {fileID: 0}
+    - target: {fileID: 8271901409147190201, guid: 0ca363742da1095429acd587f38caaca,
+        type: 3}
+      propertyPath: fxUpPrefab
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8271901409147190201, guid: 0ca363742da1095429acd587f38caaca,
+        type: 3}
+      propertyPath: fxDownPrefab
+      value: 
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -34603,3 +34614,4 @@ SceneRoots:
   - {fileID: 1921644157}
   - {fileID: 1035557428}
   - {fileID: 1482322104}
+

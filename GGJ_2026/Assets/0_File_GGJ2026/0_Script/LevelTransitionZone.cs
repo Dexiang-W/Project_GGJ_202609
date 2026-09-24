@@ -79,8 +79,15 @@ public class LevelTransitionZone : MonoBehaviour
     [Tooltip("转场时把（除正在操作玩家外的）场景自带 PlayerGroup 停用，避免画面出现两个玩家。建议保持勾选。")]
     [SerializeField] private bool cleanupExtraPlayers = true;
 
+    [Header("防误触（防“刚进关卡就自动转场”）")]
+    [Tooltip("场景加载后多少秒内忽略本区域的触发。原因：玩家是跨场景常驻物体，新场景加载完成后才被传送到出生点；" +
+             "在这之前的几帧里玩家物理位置还停留在上一场景坐标，若恰好压到本区域的触发盒，会误触发“开场就转场”。" +
+             "宽限结束后会重新判定一次：若玩家确实站在区内（出生点恰好压在区里的合法情况），仍会正常触发。0 = 不防护。")]
+    [SerializeField] private float spawnGraceSeconds = 1.5f;
+
     private bool inProgress;
     private bool used;
+    private Coroutine graceRecheckRoutine;
 
     // ---------------- 编辑器辅助：场景里画出触发范围线框（运行时无实体外观） ----------------
 
@@ -119,7 +126,57 @@ public class LevelTransitionZone : MonoBehaviour
         if (!other.CompareTag(playerTag))
             return;
 
+        // 场景刚加载、玩家还没被传送到出生点时不判定，
+        // 避免“开场动画期间旧位置压到触发盒 → 自动转场”
+        if (spawnGraceSeconds > 0f && Time.timeSinceLevelLoad < spawnGraceSeconds)
+            return;
+
         TriggerTransition();
+    }
+
+    private void OnEnable()
+    {
+        // 宽限期结束后补一次判定：玩家若因传送/生成动画等仍真实站在区内，
+        // 不会因为错过了 OnTriggerEnter 而永远无法触发。
+        if (spawnGraceSeconds > 0f && graceRecheckRoutine == null)
+            graceRecheckRoutine = StartCoroutine(RecheckOverlapAfterGrace());
+    }
+
+    private void OnDisable()
+    {
+        if (graceRecheckRoutine != null)
+        {
+            StopCoroutine(graceRecheckRoutine);
+            graceRecheckRoutine = null;
+        }
+    }
+
+    private IEnumerator RecheckOverlapAfterGrace()
+    {
+        yield return new WaitForSeconds(Mathf.Max(0.05f, spawnGraceSeconds));
+        graceRecheckRoutine = null;
+
+        if (inProgress || used || AnyTransitionRunning)
+            yield break;
+
+        BoxCollider col = GetComponent<BoxCollider>();
+        if (col == null)
+            yield break;
+
+        GameObject playerGo = GameObject.FindGameObjectWithTag(playerTag);
+        if (playerGo == null)
+            yield break;
+
+        // 角色身上可能有多个 Collider，任意一个与本区域相交即视为在区内
+        Bounds zoneBounds = col.bounds;
+        foreach (Collider pc in playerGo.GetComponentsInChildren<Collider>())
+        {
+            if (pc != null && pc.enabled && pc.bounds.Intersects(zoneBounds))
+            {
+                TriggerTransition();
+                yield break;
+            }
+        }
     }
 
     /// <summary>

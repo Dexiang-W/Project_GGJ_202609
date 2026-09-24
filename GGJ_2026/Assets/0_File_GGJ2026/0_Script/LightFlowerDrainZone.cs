@@ -38,6 +38,12 @@ using StarterAssets;
 [DisallowMultipleComponent]
 public class LightFlowerDrainZone : MonoBehaviour
 {
+    /// <summary>
+    /// 结局演出期间把它打开：花周围的暗角后处理【完全不再出现】。
+    /// 由 EndingFinaleDirector / GiveUpEndingDirector 在开演时置 true、收工时还原。
+    /// </summary>
+    public static bool SuppressVignette { get; set; }
+
     [Header("危险区域")]
     [Tooltip("危险区中心（发光花）。留空 = 用挂本脚本的物体自身；再找不到就按名字 P_LightFlower 在场景里找一次。")]
     [SerializeField] private Transform dangerCenter;
@@ -164,6 +170,11 @@ public class LightFlowerDrainZone : MonoBehaviour
     [Tooltip("材质里控制暗角强度的 float 属性名（M_PP_Vignette 里是 _Intensity）")]
     [SerializeField] private string intensityProperty = "_Intensity";
 
+    [Tooltip("已废弃的开关（保留只为兼容旧场景数据）。现在 Renderer Feature 【默认完全关闭】，" +
+             "只有玩家进入危险半径时才打开，离开立刻关闭，任何情况下都不会常驻。\n" +
+             "打包版能正常显隐靠的是 Graphics Settings → Always Included Shaders 里已加入 Sh_PP_Vignette。")]
+    [SerializeField] private bool keepVignetteFeatureActive = false;
+
     [Tooltip("闪烁的最小值")]
     [SerializeField] private float minIntensity = 0f;
 
@@ -227,6 +238,11 @@ public class LightFlowerDrainZone : MonoBehaviour
     private void Start()
     {
         ResolvePlayer();
+
+        // 一进场景就把暗角 Feature 解析好并置为“可见但强度 0”：
+        //   ① 打包版里“走进危险区才临时开 Feature”有可能不生效（编辑器可见、打包后消失），提前开最稳；
+        //   ② 顺带把 shader / 渲染缓冲在加载期准备好，真正开始闪烁时不会顿一下。
+        PrewarmVignette();
     }
 
     private void OnEnable()
@@ -240,6 +256,11 @@ public class LightFlowerDrainZone : MonoBehaviour
         beepTimer = 0f;
         blinkPhase = 0f;
         humPulsePhase = 0f;
+
+        // 防卡死：重新激活时把暗角强度压回 0
+        // （否则上一次死在花区 / 中途被禁用时的红色会一直留在画面上）
+        if (runtimeMaterial != null && runtimeMaterial.HasProperty(intensityProperty))
+            runtimeMaterial.SetFloat(intensityProperty, 0f);
     }
 
     private void OnDisable()
@@ -257,11 +278,23 @@ public class LightFlowerDrainZone : MonoBehaviour
 
     private void Update()
     {
+        // 结局 / 放弃演出的全程：哪怕玩家正好站在花的范围里，也绝不再点亮暗角。
+        // （两个结局导演各自会把 SuppressVignette 打开；这里再兜一层 IsRunning，防止有地方漏设）
+        if (SuppressVignette || EndingFinaleDirector.IsRunning || GiveUpEndingDirector.IsRunning)
+        {
+            EnsureVignetteClosed();
+            return;
+        }
+
         if (player == null)
             ResolvePlayer();
 
         if (player == null || center == null)
+        {
+            // 连玩家 / 花的中心都还没取到，暗角必须保持关闭
+            EnsureVignetteClosed();
             return;
+        }
 
         // 死亡演出进行中不再重复判定（流程结束后会重新按距离判定）
         if (dying)
@@ -276,7 +309,12 @@ public class LightFlowerDrainZone : MonoBehaviour
 
         inside = nowInside;
         if (!inside)
+        {
+            // 保险（每帧）：危险区外强度恒为 0，且整个 Pass 处于关闭状态
+            EnsureVignetteClosed();
+
             return;
+        }
 
         // 暂停菜单期间不扣时间（与提示文字 / HUD 时间基准一致）
         if (PauseMenuManager.IsPaused)
@@ -574,7 +612,34 @@ public class LightFlowerDrainZone : MonoBehaviour
         if (runtimeMaterial != null && runtimeMaterial.HasProperty(intensityProperty))
             runtimeMaterial.SetFloat(intensityProperty, originalIntensity);
 
-        SetFeatureActive(featureWasActive);
+        // 离开危险区 / 场景收尾：把整个 Full Screen Pass 关掉，强度也归 0（双保险）
+        SetFeatureActive(false);
+    }
+
+    /// <summary>危险区外的每帧保险：强度压回 0，并把整个 Pass 关掉。
+    /// 不管是谁（别的脚本、死亡演出、手动勾选）把它打开的，离开范围后都会被这里收回。</summary>
+    private void EnsureVignetteClosed()
+    {
+        if (runtimeMaterial != null && runtimeMaterial.HasProperty(intensityProperty)
+            && !Mathf.Approximately(runtimeMaterial.GetFloat(intensityProperty), 0f))
+        {
+            runtimeMaterial.SetFloat(intensityProperty, 0f);
+        }
+
+        if (targetFeature != null && targetFeature.isActive)
+            SetFeatureActive(false);
+    }
+
+    /// <summary>进场景时先解析好 Feature，并【确保它是关闭的】。
+    /// 暗角只在玩家踏进危险半径的那一刻才打开，其余时间这个 Full Screen Pass 完全不参与渲染。</summary>
+    private void PrewarmVignette()
+    {
+        EnsureVignetteReady();
+
+        // 无论 Renderer Data 里被人手动打开过、还是上一次死亡留下的状态，这里都压回关闭，
+        // Update 里还有一层保险继续盯着它
+        if (targetFeature != null)
+            SetFeatureActive(false);
     }
 
     /// <summary>首次进入危险区时解析 Feature 并克隆一份运行时材质（只做一次，之后复用）。</summary>
@@ -592,10 +657,25 @@ public class LightFlowerDrainZone : MonoBehaviour
         runtimeMaterial = new Material(originalMaterial);
         targetFeature.passMaterial = runtimeMaterial;
 
-        featureWasActive = targetFeature.isActive;
-        originalIntensity = runtimeMaterial.HasProperty(intensityProperty)
-            ? runtimeMaterial.GetFloat(intensityProperty)
-            : 0f;
+        // Feature 原始就是关的；还原时也一律还原成【关闭】
+        featureWasActive = false;
+
+        if (!runtimeMaterial.HasProperty(intensityProperty))
+        {
+            Debug.LogWarning($"[LightFlowerDrainZone] 材质 “{runtimeMaterial.name}” 里没有名为 “{intensityProperty}” 的 float 属性，" +
+                             "暗角强度链接不上（把 Intensity Property 改成材质里真实存在的属性名即可）。", this);
+        }
+
+        // 初始强度一律强制为 0，不信任 .mat 资产里存的值：
+        // 打包版里 .mat 打包时是什么值运行时就是什么值——如果打包那天材质里留着调试用的高强度，
+        // Pass 一开画面就是满屏红（打包版开局发红的根源）。
+        // 闪烁只在危险区里由 UpdateVignetteBlink 每帧写入，退出时也归 0。
+        originalIntensity = 0f;
+        if (runtimeMaterial.HasProperty(intensityProperty))
+            runtimeMaterial.SetFloat(intensityProperty, 0f);
+
+        // 解析完立刻把这个 Pass 关掉：此刻玩家还在危险区外
+        SetFeatureActive(false);
     }
 
     private bool ResolveVignetteFeature()
@@ -631,6 +711,8 @@ public class LightFlowerDrainZone : MonoBehaviour
                 if (matched)
                 {
                     targetFeature = fs;
+                    Debug.Log($"[LightFlowerDrainZone] 暗角已绑定到 “{data.name} / {fs.name}” " +
+                             $"（材质 “{featureMaterial.name}”，isActive={fs.isActive}）。", this);
                     return true;
                 }
             }
@@ -650,7 +732,17 @@ public class LightFlowerDrainZone : MonoBehaviour
             GraphicsSettings.defaultRenderPipeline as UniversalRenderPipelineAsset ??
             GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
 
-        return pipeline != null ? GetRendererDataList(pipeline) : null;
+        ScriptableRendererData[] reflected = pipeline != null ? GetRendererDataList(pipeline) : null;
+        if (reflected != null && reflected.Length > 0)
+            return reflected;
+
+        // 兜底：打包后如果反射读不到（URP 内部字段名变了 / 被裁剪），
+        // 直接扫一遍已经加载进内存的 Renderer Data，不再依赖反射
+        ScriptableRendererData[] loaded = Resources.FindObjectsOfTypeAll<ScriptableRendererData>();
+        if (loaded != null && loaded.Length > 0)
+            return loaded;
+
+        return reflected;
     }
 
     /// <summary>
@@ -681,8 +773,13 @@ public class LightFlowerDrainZone : MonoBehaviour
 
     private void SetFeatureActive(bool active)
     {
-        if (targetFeature != null && targetFeature.isActive != active)
-            targetFeature.SetActive(active);
+        if (targetFeature == null || targetFeature.isActive == active)
+            return;
+
+        targetFeature.SetActive(active);
+
+        // 只在状态真的翻转时打一条，方便在打包版的 Player.log 里核对开关时机
+        Debug.Log($"[LightFlowerDrainZone] Full Screen Pass(Vignette) → {(active ? "ON" : "OFF")} (frame {Time.frameCount})");
     }
 
     /// <summary>销毁 / 停用时还原 Renderer Data：材质引用还原、克隆销毁、Feature 开关还原。</summary>

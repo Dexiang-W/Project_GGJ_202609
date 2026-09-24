@@ -96588,6 +96588,7 @@ MonoBehaviour:
   useSpawnFacing: 1
   oneShot: 0
   cleanupExtraPlayers: 1
+  spawnGraceSeconds: 1.5
 --- !u!65 &2011579876
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -98779,6 +98780,21 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 814806686809286634, guid: f427432c7217d334fb687e48295832ed,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 814806686809286634, guid: f427432c7217d334fb687e48295832ed,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 814806686809286634, guid: f427432c7217d334fb687e48295832ed,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 875453736140219431, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_Layer
@@ -99182,12 +99198,17 @@ PrefabInstance:
     - target: {fileID: 8910237657613463205, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 40.25978
+      value: 23.93
       objectReference: {fileID: 0}
     - target: {fileID: 8910237657613463205, guid: f427432c7217d334fb687e48295832ed,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.76
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8910237657613463205, guid: f427432c7217d334fb687e48295832ed,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8953711161751098227, guid: f427432c7217d334fb687e48295832ed,
         type: 3}

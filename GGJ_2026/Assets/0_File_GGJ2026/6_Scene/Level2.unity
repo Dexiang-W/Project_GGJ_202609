@@ -5630,7 +5630,7 @@ Transform:
   m_GameObject: {fileID: 410230167}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -7.444, y: 1.837, z: -0.273}
+  m_LocalPosition: {x: -7.444, y: 1.837, z: -0.173}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -9093,7 +9093,7 @@ Transform:
   m_GameObject: {fileID: 753657530}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -2.0073183, y: -3.6774592, z: -0.273}
+  m_LocalPosition: {x: -2.0073183, y: -3.6774592, z: -0.17300001}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -11803,6 +11803,39 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 975397480}
   m_PrefabAsset: {fileID: 0}
+--- !u!21 &982360978
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SandStorm_ParticleMat
+  m_Shader: {fileID: 4800000, guid: 13671c380631170409759d59808921dd, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats: []
+    m_Colors:
+    - _Tint: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
 --- !u!1 &990104036
 GameObject:
   m_ObjectHideFlags: 0
@@ -12469,6 +12502,7 @@ MonoBehaviour:
   useSpawnFacing: 1
   oneShot: 0
   cleanupExtraPlayers: 1
+  spawnGraceSeconds: 1.5
 --- !u!65 &1030693437
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -13182,39 +13216,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -7432527215769726652, guid: 287d0fb38023fa049b198db643c7b964, type: 3}
---- !u!21 &1063037007
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: SandStorm_ParticleMat
-  m_Shader: {fileID: 4800000, guid: 13671c380631170409759d59808921dd, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
-  stringTagMap:
-    RenderType: Transparent
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats: []
-    m_Colors:
-    - _Tint: {r: 1, g: 1, b: 1, a: 1}
-  m_BuildTextureStacks: []
 --- !u!1001 &1076319021
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13683,6 +13684,79 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1859875536}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1105595734
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1710388660612083923, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_Name
+      value: P_EnergyBall (5)
+      objectReference: {fileID: 0}
+    - target: {fileID: 2087231236053658217, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 236.64
+      objectReference: {fileID: 0}
+    - target: {fileID: 2087231236053658217, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 14.58
+      objectReference: {fileID: 0}
+    - target: {fileID: 2087231236053658217, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.19447541
+      objectReference: {fileID: 0}
+    - target: {fileID: 2087231236053658217, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071067
+      objectReference: {fileID: 0}
+    - target: {fileID: 2087231236053658217, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 2087231236053658217, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2087231236053658217, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2087231236053658217, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2087231236053658217, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2087231236053658217, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6551882079318598656, guid: c999f3a72f80fae47841c641166c1c84,
+        type: 3}
+      propertyPath: pickupRadius
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: c999f3a72f80fae47841c641166c1c84, type: 3}
 --- !u!1 &1113131585
 GameObject:
   m_ObjectHideFlags: 0
@@ -20292,7 +20366,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2047106004}
+  - {fileID: 982360978}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -36264,39 +36338,6 @@ Transform:
   - {fileID: 1511867976}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!21 &2047106004
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: SandStorm_ParticleMat
-  m_Shader: {fileID: 4800000, guid: 13671c380631170409759d59808921dd, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
-  stringTagMap:
-    RenderType: Transparent
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats: []
-    m_Colors:
-    - _Tint: {r: 1, g: 1, b: 1, a: 1}
-  m_BuildTextureStacks: []
 --- !u!1001 &2050826471
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -37995,4 +38036,5 @@ SceneRoots:
   - {fileID: 1878268819}
   - {fileID: 334882992}
   - {fileID: 326688169}
+  - {fileID: 1105595734}
   - {fileID: 1426815758}

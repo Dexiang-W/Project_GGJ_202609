@@ -41,7 +41,7 @@ Material:
     m_Floats:
     - _ISROUNDED: 1
     - _Intensity: 0
-    - _Range: 2.42
+    - _Range: 1.42
     - _Smoothness: 1.18
     m_Colors:
     - _Color: {r: 1, g: 0, b: 0, a: 0}

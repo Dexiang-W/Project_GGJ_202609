@@ -2618,6 +2618,129 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4c2a81b34772bcd43bd8dfe3c382b796, type: 3}
+--- !u!1 &505972665
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 505972667}
+  - component: {fileID: 505972666}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &505972666
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 505972665}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4e7c89959985ac47816fd57361eebe8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  walkStages:
+  - sceneName: Level3+4
+    startPointName: 1Point
+    startPointFallbacks:
+    - SpawnPoint
+    - StartPoint
+    - Spawn
+    endPointName: 
+    arriveDistance: 1.2
+    walkDirection: 1
+    walkSeconds: 5.5
+    maxWalkSeconds: 9
+    playerScale: 1
+    moveSpeed: 2.8
+    cameraOffset: {x: 0, y: 3.2, z: -6.5}
+    cameraFOV: 42
+    message: "\u5E0C\u671B\u6211\u8FD9\u4E2A\u9009\u62E9\u662F\u6B63\u786E\u7684..."
+    morphToEnergyBall: 0
+    morphStartProgress: 0.1
+    morphEndScale: 0
+    slowDownSeconds: 0
+  useCustomSpawnPoint: 1
+  customSpawnPointName: EndingSpawnPoint
+  customSpawnPointOverride: {fileID: 0}
+  snapPointZToZero: 1
+  validateStartPoint: 1
+  groundProbeDistance: 12
+  groundProbeHeight: 1.5
+  groundSnapOffset: 0.05
+  groundProbeLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  fadeToBlackSeconds: 1
+  fadeFromBlackSeconds: 0.8
+  blackHoldSeconds: 0.5
+  matchAnimationToScale: 1
+  maxAnimationSpeedFactor: 4
+  messageDelaySeconds: 0.8
+  messageFadeInSeconds: 1
+  messageHoldSeconds: 2.2
+  messageFadeOutSeconds: 1.2
+  messageFontSize: 44
+  messageColor: {r: 1, g: 1, b: 1, a: 1}
+  messageLeftMargin: 110
+  messageHeightRatio: 0.66
+  messageWidth: 1200
+  energyBallPrefab: {fileID: 0}
+  energyBallDiameter: 0
+  energyBallHeight: 0.9
+  energyBallTowardCamera: 0.6
+  energyBallColor: {r: 0.35, g: 0.95, b: 1, a: 1}
+  endingPlayer: {fileID: 0}
+  endingTexts:
+  - "\u56E0\u4E3A\u4F60\u7684\u9009\u62E9\uFF0C\u5B9E\u9A8C\u5BA4\u8F9C\u8D1F\u4E86\u5916\u754C\u7684\u671F\u5F85\u3002"
+  - "\u8206\u8BBA\u7684\u538B\u529B\u4E4B\u4E0B\uFF0C\u4F60\u88AB\u9500\u6BC1\u4E86\u3002"
+  - "\u81F3\u4E8E\u5B9E\u9A8C\u662F\u5426\u4ECD\u5728\u67D0\u5904\u7EE7\u7EED\u2026\u2026\u65E0\u4EBA\u77E5\u6653\u3002"
+  creditsLines:
+  - "\u2014\u2014 \u9E23 \u8C22 \u2014\u2014"
+  - "\u738B\u5FB7\u7965 TA"
+  - "\u677F\u51F3 \u5173\u5361\u7B56\u5212+\u7A0B\u5E8F"
+  - "\u9676\u9A8F\u817E \u97F3\u9891"
+  - "Ruki \u4E3B\u7F8E"
+  - "\u5305\u5305 3d\u7F8E\u672F"
+  - "\u5C0F\u9752 3d\u7F8E\u672F"
+  - "\u6BB7\u9E3F\u5609 3d\u7F8E\u672F"
+  - "\u611F\u8C22\u6BCF\u4E00\u4F4D\u6D4B\u8BD5\u73A9\u5BB6\uFF01"
+  endingTextHoldSeconds: 3.2
+  beforeTextsDelaySeconds: 0.6
+  disableSceneMechanics: 1
+  disableTriggerColliders: 1
+  hideInteractiveProps: 1
+  keepEnabledBehaviours: []
+  keepEnabledTypeNames:
+  - Volume
+  - VolumeTrigger
+  - UniversalAdditionalCameraData
+  - UniversalAdditionalLightData
+  - HDAdditionalCameraData
+  - HDAdditionalLightData
+--- !u!4 &505972667
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 505972665}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 18.889828, y: 12.8851595, z: -7.917529}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &507783918 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4e53c5508efbeed49a4c82afccf85861,
@@ -7762,6 +7885,10 @@ MonoBehaviour:
   creditsScrollSpeed: 130
   creditsLineSpacing: 24
   creditsSideMargin: 260
+  creditsFinalLineHoldSeconds: 1.6
+  creditsFadeOutSeconds: 0.8
+  holdLastCreditLineInCenter: 1
+  afterCreditsDelaySeconds: 0.6
   stayOnBlackAfterFinish: 1
   OnFinished:
     m_PersistentCalls:
@@ -8569,6 +8696,16 @@ PrefabInstance:
       propertyPath: paperTitle
       value: "\u3010\u5B9E\u9A8C\u4F53 07 \xB7 \u80FD\u91CF-\u690D\u7269\u8F6C\u6362\u5668\u3011"
       objectReference: {fileID: 0}
+    - target: {fileID: 8271901409147190201, guid: 0ca363742da1095429acd587f38caaca,
+        type: 3}
+      propertyPath: fxUpPrefab
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8271901409147190201, guid: 0ca363742da1095429acd587f38caaca,
+        type: 3}
+      propertyPath: fxDownPrefab
+      value: 
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -8807,3 +8944,5 @@ SceneRoots:
   - {fileID: 922907638}
   - {fileID: 29757061}
   - {fileID: 110142448}
+  - {fileID: 505972667}
+

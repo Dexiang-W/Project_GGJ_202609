@@ -106,6 +106,9 @@ public class EndingFinaleDirector : MonoBehaviour
     [Header("③ 枯萎关卡与运镜")]
     [Tooltip("要切换过去的“枯萎关卡”场景名（须已加入 Build Settings）")]
     [SerializeField] private string witheredSceneName = "Level2";
+    [Tooltip("勾选（默认）= 切进枯萎关卡后，把场景里所有【可交互物】整个隐藏掉（能量球、报纸、便签……）。\n" +
+             "结局演出里它们不该再出现在画面上。地形 / 建筑 / 玩家 / 相机 / HUD 不动。")]
+    [SerializeField] private bool hideInteractiveProps = true;
     [Tooltip("镜头从左端走到右端的总时长（秒）")]
     [SerializeField] private float travelSeconds = 20f;
     [Tooltip("勾选（默认）= 按场景内容自动算一条从左到右的镜头轨道（用下面的高度 / 纵深 / 留白）；\n" +
@@ -282,6 +285,10 @@ public class EndingFinaleDirector : MonoBehaviour
         bool previousSuppress = InteractableObject.SuppressInteractionInput;
         InteractableObject.SuppressInteractionInput = true;
 
+        // 演出期间屏蔽“花周围的暗角后处理”：走过的场景里就算有危险区，也不能在这段戏里泛红
+        bool previousVignette = LightFlowerDrainZone.SuppressVignette;
+        LightFlowerDrainZone.SuppressVignette = true;
+
         try
         {
             GameplayHUD.EnsureCreated();
@@ -331,6 +338,7 @@ public class EndingFinaleDirector : MonoBehaviour
         }
         finally
         {
+            LightFlowerDrainZone.SuppressVignette = previousVignette;
             InteractableObject.SuppressInteractionInput = previousSuppress;
             IsRunning = false;
         }
@@ -690,6 +698,21 @@ public class EndingFinaleDirector : MonoBehaviour
 
         DisableExtraCameras(mainCamera);
         yield return null;
+
+        // 结局演出里不该再看到能量球 / 报纸这些可交互物，直接整个隐藏掉
+        if (hideInteractiveProps)
+        {
+            HashSet<Transform> keepRoots = new HashSet<Transform> { transform.root };
+            if (player != null)
+                keepRoots.Add(player.transform.root);
+            if (mainCamera != null)
+                keepRoots.Add(mainCamera.transform.root);
+            if (GameplayHUD.Instance != null)
+                keepRoots.Add(GameplayHUD.Instance.transform.root);
+
+            GiveUpEndingDirector.HideInteractivePropsInScene(keepRoots);
+            yield return null;
+        }
 
         // 关掉“淋雨”全屏特效（此时画面还是全黑，怎么关都看不见跳变）
         DisableRainEffect();

@@ -213,12 +213,11 @@ public class InteractableObject : MonoBehaviour
             if (AudioManager.Instance != null)
                 AudioManager.Instance.PlayInject();
 
-            // 玩家按 E 之前接好的命令（通常 = 给植物 Animator SetTrigger(IsRise) 让它生长）
             OnInteract?.Invoke();
             return;
         }
 
-        // —— 普通可交互物体（非能量植物）：保持原有行为 ——
+        // —— 普通可交互物体（书本 / 报纸 / 门把手等）：保持原有行为，【不播能量特效】 ——
         if (consumeOnInteract)
             consumed = true;
 

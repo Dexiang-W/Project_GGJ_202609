@@ -101,6 +101,15 @@ public class EndingSequencePlayer : MonoBehaviour
     [SerializeField] private float creditsLineSpacing = 24f;
     [Tooltip("报幕左右留白（像素）")]
     [SerializeField] private float creditsSideMargin = 260f;
+    [Tooltip("报幕滚到最后一行时，让这一行【停在屏幕正中】停留多少秒，再整块淡出。\n" +
+             "演出顺序因此变成：报幕上滚 → 最后一行居中停留 → 文字消失 → 才接结尾图（不再和图片重叠）。")]
+    [SerializeField] private float creditsFinalLineHoldSeconds = 1.6f;
+    [Tooltip("最后一行居中停留完之后，报幕整体淡出所需时长（秒）")]
+    [SerializeField] private float creditsFadeOutSeconds = 0.8f;
+    [Tooltip("勾选（默认）= 最后一行停在屏幕正中；不勾 = 一直滚到所有文字都滚出顶边才结束")]
+    [SerializeField] private bool holdLastCreditLineInCenter = true;
+    [Tooltip("报幕文字彻底消失后、结尾图开始淡入前的停顿（秒）")]
+    [SerializeField] private float afterCreditsDelaySeconds = 0.6f;
 
     [Header("⑤ 结束行为")]
     [Tooltip("勾选 = 报幕滚完停在黑屏（典型结局）；不勾 = 黑幕淡出、恢复操作继续游戏")]
@@ -138,6 +147,8 @@ public class EndingSequencePlayer : MonoBehaviour
     private Outline subtitleOutline;
     private RectTransform creditsMaskRT;
     private RectTransform creditsWindow;
+    /// <summary>报幕滚动窗口的淡入淡出控制（最后一行居中停留完之后整块淡掉）。</summary>
+    private CanvasGroup creditsGroup;
 
     /// <summary>全屏结尾图（报幕滚完后 淡入→停留→淡出）。</summary>
     private Image endingImageObject;
@@ -312,6 +323,10 @@ public class EndingSequencePlayer : MonoBehaviour
         if (creditsLines != null && creditsLines.Length > 0)
             yield return ScrollCreditsRoutine(creditsLines);
 
+        // 3.4 报幕文字已经彻底清掉了，这里再空一拍，让“文字消失”和“图片出现”在观感上分开
+        if (afterCreditsDelaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(afterCreditsDelaySeconds);
+
         // 3.5 结尾图：淡入 → 停留 → 淡出（默认共 4 秒）→ 全部结束
         yield return ShowEndingImageRoutine();
 
@@ -353,6 +368,11 @@ public class EndingSequencePlayer : MonoBehaviour
         EnsureCanvas();
         ClearCreditLines();
 
+        if (creditsGroup == null && creditsWindow != null)
+            creditsGroup = creditsWindow.GetComponent<CanvasGroup>();
+        if (creditsGroup != null)
+            creditsGroup.alpha = 1f;
+
         Rect rect = creditsMaskRT.rect;
         float screenHeight = Mathf.Max(1f, rect.height);
         float lineHeight = Mathf.Max(20f, creditsFontSize * 1.5f);
@@ -360,16 +380,24 @@ public class EndingSequencePlayer : MonoBehaviour
         float startY = -lineHeight;                       // 首行从屏幕底边之下滚上来
         int count = lines.Length;
 
+        // 整块名单堆在首行【下方】：窗口上移时第 0 行最先从底边露出来，最后一行最后才升上来
+        // （以前写成 startY + i * spacing，名单是倒着排的：一开场中间就压着好几行，最后还滚不干净）
         float width = Mathf.Max(100f, rect.width - creditsSideMargin * 2f);
         for (int i = 0; i < count; i++)
         {
             RectTransform line = CreateCreditLine(lines[i], width, lineHeight);
-            line.anchoredPosition = new Vector2(0f, startY + i * spacing);
+            line.anchoredPosition = new Vector2(0f, startY - i * spacing);
             creditLines.Add(line);
         }
 
-        // 需要把最后一行完全滚出顶边才结束
-        float endTravel = screenHeight + lineHeight - (startY + (count - 1) * spacing);
+        float lastLineY = startY - (count - 1) * spacing;
+
+        // 停在正中：让最后一行的“垂直中线”落在屏幕中线上（行 pivot 在底边，所以底边要再往下压半行）
+        // 滚干净模式：再多滚一整屏，直到最后一行的底边也越过顶边
+        float endTravel = holdLastCreditLineInCenter
+            ? screenHeight * 0.5f - lineHeight * 0.5f - lastLineY
+            : screenHeight - lastLineY + lineHeight;
+
         float traveled = 0f;
 
         while (traveled < endTravel)
@@ -382,6 +410,37 @@ public class EndingSequencePlayer : MonoBehaviour
 
         if (creditsWindow != null)
             creditsWindow.anchoredPosition = new Vector2(0f, endTravel);
+
+        // 最后一行在正中停留 → 整块淡出 → 清干净
+        // 这一步很关键：保证“文字先消失，再接结尾图”，不会同时叠在屏幕上
+        if (creditsFinalLineHoldSeconds > 0f)
+            yield return new WaitForSecondsRealtime(creditsFinalLineHoldSeconds);
+
+        yield return FadeCreditsRoutine(1f, 0f, Mathf.Max(0.01f, creditsFadeOutSeconds));
+
+        ClearCreditLines();
+    }
+
+    /// <summary>报幕滚动窗口整体淡入 / 淡出。</summary>
+    private IEnumerator FadeCreditsRoutine(float from, float to, float duration)
+    {
+        if (creditsGroup == null)
+        {
+            if (creditsWindow != null)
+                creditsGroup = creditsWindow.GetComponent<CanvasGroup>();
+            if (creditsGroup == null)
+                yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            creditsGroup.alpha = Mathf.Lerp(from, to, Mathf.Clamp01(elapsed / duration));
+            yield return null;
+        }
+
+        creditsGroup.alpha = to;
     }
 
     // ---------------------------------------------------------------- 结尾图（报幕之后）
@@ -542,6 +601,9 @@ public class EndingSequencePlayer : MonoBehaviour
         GameObject windowGO = CreateUiChild("CreditsScrollWindow", creditsMaskRT);
         creditsWindow = windowGO.GetComponent<RectTransform>();
         StretchFull(creditsWindow);
+
+        creditsGroup = windowGO.AddComponent<CanvasGroup>();
+        creditsGroup.alpha = 1f;
     }
 
     private RectTransform CreateCreditLine(string content, float width, float height)
